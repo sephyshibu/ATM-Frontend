@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
-// A dropdown with a search box, for long lists (countries, companies, people). One value, or several.
+// A dropdown with a search box, for long lists (countries, organisations, people). One value, or several.
 
 export type PickOption = { value: string; label: string; hint?: string }
 
@@ -127,7 +127,20 @@ export function MultiPick({ values, onChange, ...p }: Common & { values: string[
       </PopoverTrigger>
       <PopoverContent align="start" className="w-(--radix-popover-trigger-width) min-w-64 p-0">
         <SearchBox value={query} onChange={setQuery} />
-        <OptionList options={p.options} query={query} selected={new Set(values)} onPick={(v) => onChange(values.includes(v) ? values.filter((x) => x !== v) : [...values, v])} />
+        <OptionList
+          options={p.options}
+          query={query}
+          selected={new Set(values)}
+          onPick={(v) => onChange(values.includes(v) ? values.filter((x) => x !== v) : [...values, v])}
+          onCreate={
+            p.onCreate &&
+            ((t) => {
+              p.onCreate!(t)
+              setQuery("")
+            })
+          }
+          createLabel={p.createLabel}
+        />
         {values.length > 0 && (
           <div className="border-t p-1.5">
             <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => onChange([])}>

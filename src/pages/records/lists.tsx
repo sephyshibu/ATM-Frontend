@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import { useApi } from "@/lib/api"
 import { countryName, optionLabel, personName, usdShort } from "@/lib/records"
 import { useSession } from "@/lib/session"
-import type { BrandRow, Organisation, PersonRow, RecordOptions } from "@/lib/types"
+import type { BrandRow, Organisation, PersonRow, RecordOptions, TagRef } from "@/lib/types"
 
 import { LoadError, Loading } from "../settings/shared"
 import { BrandDialog } from "./brand-dialog"
@@ -18,9 +18,15 @@ import { OrganisationDialog } from "./organisation-dialog"
 import { PersonActions } from "./person-actions"
 import { PersonDialog } from "./person-dialog"
 import { EmailStatus, EmptyList, Table } from "./shared"
+import { TagChips } from "./tags"
 
 // The three Records lists. Each has search, filters, sorting, a "Show archived" switch and an Add button
 // (for people who can edit records). Rows open the record's page.
+
+const BRAND_COLS = "minmax(0,2fr) minmax(0,1.4fr) minmax(0,1.4fr) 100px 110px 100px 60px minmax(0,1fr) 72px 56px"
+
+/** One filter option per tag found in the rows. */
+const tagOptions = (tags: TagRef[]) => [...new Map(tags.map((t) => [t.code, t.label])).entries()].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label))
 
 const uniq = (values: (string | null | undefined)[]) => [...new Set(values.filter((v): v is string => !!v))]
 
@@ -47,18 +53,20 @@ export function BrandsList({ options }: { options?: RecordOptions }) {
   const data = rows.data ?? []
   const label = (list: keyof RecordOptions["lists"], code: string | null) => optionLabel(options, list, code)
   const { shown, toolbar } = useListControls(data, {
-    placeholder: "Search brands, websites, companies",
-    search: (b) => `${b.name} ${b.domain} ${b.organisation.name}`,
+    placeholder: "Search brands, websites, organisations",
+    search: (b) => `${b.name} ${b.domain} ${b.organisation.name} ${b.tags.map((t) => t.label).join(" ")}`,
     filters: [
       { id: "category", label: "Category", options: uniq(data.map((b) => b.categoryCode)).map((c) => ({ value: c, label: label("category", c) })), test: (b, v) => b.categoryCode === v },
       { id: "routing", label: "Lane", options: uniq(data.map((b) => b.routingCode)).map((c) => ({ value: c, label: label("routing", c) })), test: (b, v) => b.routingCode === v },
       { id: "tier", label: "Tier", options: uniq(data.map((b) => b.tierCode)).map((c) => ({ value: c, label: label("tier", c) })), test: (b, v) => b.tierCode === v },
       { id: "home", label: "Home country", options: uniq(data.map((b) => b.homeCountry)).map((c) => ({ value: c, label: countryName(c) })), test: (b, v) => b.homeCountry === v },
       { id: "owner", label: "Owner", options: [...new Map(data.filter((b) => b.owner).map((b) => [b.owner!.id, b.owner!.name])).entries()].map(([value, l]) => ({ value, label: l })), test: (b, v) => b.owner?.id === v },
+      { id: "tag", label: "Tags", options: tagOptions(data.flatMap((x) => x.tags ?? [])), test: (x, v) => !!x.tags?.some((t) => t.code === v) },
     ],
     sorts: [
       { value: "name", label: "Name", key: (b) => b.name },
       { value: "revenue", label: "Home revenue", key: (b) => b.homeRevenueUsd ?? -1 },
+      { value: "products", label: "Products", key: (b) => b.productCount },
       { value: "added", label: "Date added", key: (b) => b.createdAt },
     ],
     defaultSort: "name",
@@ -83,15 +91,16 @@ export function BrandsList({ options }: { options?: RecordOptions }) {
       ) : !shown.length ? (
         <NoMatches />
       ) : (
-        <Table columns="minmax(0,2fr) minmax(0,1.4fr) minmax(0,1.4fr) 100px 110px 100px 60px minmax(0,1fr) 56px" head={["Brand", "Company", "Category", "Lane", "Home", "Revenue", "Tier", "Owner", "People"]}>
+        <Table columns={BRAND_COLS} head={["Brand", "Organisation", "Category", "Lane", "Home", "Revenue", "Tier", "Owner", "Products", "People"]}>
           {shown.map((b) => (
             <li key={b.id}>
-              <Link to={`/records/brands/${b.id}`} className="grid items-center gap-3 px-4 py-2.5 hover:bg-muted/40" style={{ gridTemplateColumns: "minmax(0,2fr) minmax(0,1.4fr) minmax(0,1.4fr) 100px 110px 100px 60px minmax(0,1fr) 56px" }}>
+              <Link to={`/records/brands/${b.id}`} className="grid items-center gap-3 px-4 py-2.5 hover:bg-muted/40" style={{ gridTemplateColumns: BRAND_COLS }}>
                 <span className="flex min-w-0 flex-col">
                   <span className="flex items-center gap-2 truncate font-medium">
                     {b.name} {b.archived && archivedChip}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">{b.domain}</span>
+                  <TagChips tags={b.tags} className="mt-1" />
                 </span>
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span className="truncate">{b.organisation.name}</span>
@@ -106,6 +115,7 @@ export function BrandsList({ options }: { options?: RecordOptions }) {
                 <span className="tabular-nums">{usdShort(b.homeRevenueUsd)}</span>
                 <span>{label("tier", b.tierCode)}</span>
                 <span className="truncate">{b.owner?.name}</span>
+                <span className="tabular-nums">{b.productCount}</span>
                 <span className="tabular-nums">{b.peopleCount}</span>
               </Link>
             </li>
@@ -117,7 +127,7 @@ export function BrandsList({ options }: { options?: RecordOptions }) {
   )
 }
 
-// ---------------------------------------------------------------- Companies
+// ---------------------------------------------------------------- Organisations
 
 export function OrganisationsList({ options }: { options?: RecordOptions }) {
   const { can } = useSession()
@@ -127,8 +137,8 @@ export function OrganisationsList({ options }: { options?: RecordOptions }) {
   const rows = useApi<Organisation[]>(`/records/organisations${archived ? "?archived=true" : ""}`)
   const data = rows.data ?? []
   const { shown, toolbar } = useListControls(data, {
-    placeholder: "Search companies and websites",
-    search: (o) => `${o.name} ${o.domain ?? ""} ${o.legalEntity ?? ""} ${o.parent?.name ?? ""}`,
+    placeholder: "Search organisations and websites",
+    search: (o) => `${o.name} ${o.domain ?? ""} ${o.legalEntity ?? ""} ${o.parent?.name ?? ""} ${(o.tags ?? []).map((t) => t.label).join(" ")}`,
     filters: [
       { id: "hq", label: "Head office", options: uniq(data.map((o) => o.hqCountry)).map((c) => ({ value: c, label: countryName(c) })), test: (o, v) => o.hqCountry === v },
       { id: "group", label: "Parent group", options: [...new Map(data.filter((o) => o.parent).map((o) => [o.parent!.id, o.parent!.name])).entries()].map(([value, l]) => ({ value, label: l })), test: (o, v) => o.parentId === v || o.id === v },
@@ -141,6 +151,7 @@ export function OrganisationsList({ options }: { options?: RecordOptions }) {
         ],
         test: (o, v) => o.excluded === (v === "yes"),
       },
+      { id: "tag", label: "Tags", options: tagOptions(data.flatMap((x) => x.tags ?? [])), test: (x, v) => !!x.tags?.some((t) => t.code === v) },
     ],
     sorts: [
       { value: "name", label: "Name", key: (o) => o.name },
@@ -157,7 +168,7 @@ export function OrganisationsList({ options }: { options?: RecordOptions }) {
         <ArchivedSwitch on={archived} set={setArchived} />
         {can("records.edit") && (
           <Button size="sm" onClick={() => setAdding(true)}>
-            <Plus /> Add company
+            <Plus /> Add organisation
           </Button>
         )}
       </ListToolbar>
@@ -166,11 +177,11 @@ export function OrganisationsList({ options }: { options?: RecordOptions }) {
       ) : rows.loading && !rows.data ? (
         <Loading />
       ) : !data.length ? (
-        <EmptyList>No companies yet. A company is added with its first brand, or here.</EmptyList>
+        <EmptyList>No organisations yet. An organisation is added with its first brand, or here.</EmptyList>
       ) : !shown.length ? (
         <NoMatches />
       ) : (
-        <Table columns={cols} head={["Company", "Parent group", "Head office", "Brands", "People"]}>
+        <Table columns={cols} head={["Organisation", "Parent group", "Head office", "Brands", "People"]}>
           {shown.map((o) => (
             <li key={o.id}>
               <Link to={`/records/organisations/${o.id}`} className="grid items-center gap-3 px-4 py-2.5 hover:bg-muted/40" style={{ gridTemplateColumns: cols }}>
@@ -179,6 +190,7 @@ export function OrganisationsList({ options }: { options?: RecordOptions }) {
                     {o.name} {o.excluded && excludedChip} {o.archived && archivedChip}
                   </span>
                   {(o.legalEntity || o.domain) && <span className="truncate text-xs text-muted-foreground">{[o.legalEntity, o.domain].filter(Boolean).join(" · ")}</span>}
+                  <TagChips tags={o.tags} className="mt-1" />
                 </span>
                 <span className="truncate">{o.parent?.name}</span>
                 <span className="truncate">{countryName(o.hqCountry)}</span>
@@ -203,7 +215,7 @@ export function PeopleList({ options }: { options?: RecordOptions }) {
   const rows = useApi<PersonRow[]>(`/records/people${archived ? "?archived=true" : ""}`)
   const data = rows.data ?? []
   const { shown, toolbar } = useListControls(data, {
-    placeholder: "Search people, emails, companies",
+    placeholder: "Search people, emails, organisations",
     search: (p) => `${personName(p)} ${p.email ?? ""} ${p.jobTitle} ${p.organisation.name} ${p.brands.map((b) => b.name).join(" ")}`,
     filters: [
       { id: "role", label: "Buying role", options: uniq(data.map((p) => p.buyingRoleCode)).map((c) => ({ value: c, label: optionLabel(options, "buying_role", c) })), test: (p, v) => p.buyingRoleCode === v },
@@ -222,7 +234,7 @@ export function PeopleList({ options }: { options?: RecordOptions }) {
     ],
     sorts: [
       { value: "name", label: "Name", key: (p) => personName(p) },
-      { value: "company", label: "Company", key: (p) => p.organisation.name },
+      { value: "organisation", label: "Organisation", key: (p) => p.organisation.name },
       { value: "added", label: "Date added", key: (p) => p.createdAt },
     ],
     defaultSort: "name",
@@ -244,11 +256,11 @@ export function PeopleList({ options }: { options?: RecordOptions }) {
       ) : rows.loading && !rows.data ? (
         <Loading />
       ) : !data.length ? (
-        <EmptyList>No people yet. Add them from a brand or a company, or here.</EmptyList>
+        <EmptyList>No people yet. Add them from a brand or an organisation, or here.</EmptyList>
       ) : !shown.length ? (
         <NoMatches />
       ) : (
-        <Table columns={cols} head={["Person", "Company", "Brands", "Email", "Buying role", "Country", ""]}>
+        <Table columns={cols} head={["Person", "Organisation", "Brands", "Email", "Buying role", "Country", ""]}>
           {shown.map((p) => {
             const brands = p.brands.filter((b) => !b.archivedAt)
             return (

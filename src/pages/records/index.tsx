@@ -6,11 +6,11 @@ import { useSession } from "@/lib/session"
 
 import { BrandsList, OrganisationsList, PeopleList } from "./lists"
 
-// Records: the brands ATM may work with, the companies behind them and the people there. ?tab=… opens a list.
+// Records: the brands ATM may work with, the organisations (legal entities) that own them and the people there. ?tab=… opens a list.
 
 const TABS = [
   { key: "brands", title: "Brands", List: BrandsList },
-  { key: "companies", title: "Companies", List: OrganisationsList },
+  { key: "organisations", title: "Organisations", List: OrganisationsList },
   { key: "people", title: "People", List: PeopleList },
 ]
 
@@ -25,7 +25,7 @@ export function RecordsPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-0.5">
         <h1 className="text-xl font-semibold tracking-[-0.01em]">Records</h1>
-        <p className="text-sm text-muted-foreground">Brands, the companies behind them and the people there. Nothing is ever deleted: archived records can be restored.</p>
+        <p className="text-sm text-muted-foreground">Brands, the organisations (legal entities) that own them and the people there. Nothing is ever deleted: archived records can be restored.</p>
       </div>
       <Tabs value={current} onValueChange={(tab) => setParams({ tab }, { replace: true })} className="gap-4">
         <TabsList variant="line">

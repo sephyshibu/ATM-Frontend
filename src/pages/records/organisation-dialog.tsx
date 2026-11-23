@@ -12,9 +12,10 @@ import { countryName } from "@/lib/records"
 import type { Organisation, OrganisationDetail, RecordOptions } from "@/lib/types"
 
 import { attempt, useBusy } from "../settings/shared"
+import { TagPick } from "./tags"
 
-// Add or edit a company (organisation): the company that owns one or more brands. It can sit inside a bigger
-// parent group (another company in Records), has a registered legal name for agreements and invoices, and can be
+// Add or edit an organisation: the legal entity ATM signs with, holding one or more brands (a brand that signs on
+// its own is registered as its own organisation). It can sit inside a bigger parent group (another organisation), has a registered legal name for agreements and invoices, and can be
 // excluded: nobody approaches it or its brands. Turning the exclusion on or off needs a reason.
 
 export function OrganisationDialog({ open, org, options, onClose, onSaved }: { open: boolean; org?: Organisation; options?: RecordOptions; onClose: () => void; onSaved: (o: OrganisationDetail) => void }) {
@@ -34,6 +35,7 @@ function OrganisationForm({ org, options, onClose, onSaved }: { org?: Organisati
   const [hqCountry, setHq] = useState(org?.hqCountry ?? "")
   const [linkedinUrl, setLinkedin] = useState(org?.linkedinUrl ?? "")
   const [notes, setNotes] = useState(org?.notes ?? "")
+  const [tagCodes, setTags] = useState<string[]>(org?.tags?.map((t) => t.code) ?? [])
   const [excluded, setExcluded] = useState(org?.excluded ?? false)
   const [why, setWhy] = useState("")
   const [tried, setTried] = useState(false)
@@ -42,12 +44,12 @@ function OrganisationForm({ org, options, onClose, onSaved }: { org?: Organisati
   const groups = (all.data ?? []).filter((o) => !o.archived && o.id !== org?.id).map((o) => ({ value: o.id, label: o.name, hint: o.domain ?? undefined }))
   const exclusionChanged = excluded !== (org?.excluded ?? false)
 
-  const error = !name.trim() ? "Give the company a name." : exclusionChanged && !why.trim() ? (excluded ? "Say why this company is excluded." : "Say why the exclusion is lifted.") : undefined
+  const error = !name.trim() ? "Give the organisation a name." : exclusionChanged && !why.trim() ? (excluded ? "Say why this organisation is excluded." : "Say why the exclusion is lifted.") : undefined
 
   const save = async () => {
     setTried(true)
     if (error) return
-    const body = { name: name.trim(), legalEntity, domain, parentId: parentId || null, hqCountry, linkedinUrl, notes, ...(exclusionChanged ? { excluded, exclusionReason: why.trim() } : {}) }
+    const body = { name: name.trim(), legalEntity, domain, parentId: parentId || null, hqCountry, linkedinUrl, notes, tagCodes, ...(exclusionChanged ? { excluded, exclusionReason: why.trim() } : {}) }
     const r = await run(() => attempt(() => (org ? api.patch<OrganisationDetail>(`/records/organisations/${org.id}`, body) : api.post<OrganisationDetail>("/records/organisations", body)), org ? "Saved." : `${name.trim()} added.`))
     if (r) onSaved(r)
   }
@@ -55,17 +57,17 @@ function OrganisationForm({ org, options, onClose, onSaved }: { org?: Organisati
   return (
     <>
       <div className="flex flex-col gap-1 border-b px-6 py-4">
-        <DialogTitle>{org ? `Edit ${org.name}` : "Add a company"}</DialogTitle>
-        <DialogDescription>The company that owns the brands. People who work there are added under it.</DialogDescription>
+        <DialogTitle>{org ? `Edit ${org.name}` : "Add an organisation"}</DialogTitle>
+        <DialogDescription>The legal entity ATM signs with. Its brands, and the people who work there, sit under it.</DialogDescription>
       </div>
       <div className="grid grid-cols-2 gap-3 overflow-y-auto px-6 py-5">
-        <Field label="Company name">
+        <Field label="Organisation name">
           <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} aria-invalid={tried && !name.trim()} placeholder="e.g. Glow Cosmetics" className="h-8 text-foreground" />
         </Field>
         <Field label="Legal entity (registered name)">
           <Input value={legalEntity} onChange={(e) => setLegal(e.target.value)} placeholder="e.g. Glow Cosmetics Pvt Ltd" className="h-8 text-foreground" />
         </Field>
-        <Field label="Company website (optional)">
+        <Field label="Organisation website (optional)">
           <Input value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="e.g. glowcosmetics.com" className="h-8 text-foreground" />
         </Field>
         <Field label="Head office country">
@@ -74,9 +76,12 @@ function OrganisationForm({ org, options, onClose, onSaved }: { org?: Organisati
         <Field label="Parent group (optional)" className="col-span-2">
           <SearchPick options={groups} value={parentId} onChange={setParent} placeholder={all.loading ? "Loading…" : "None: it isn't part of a bigger group"} aria-label="Parent group" />
         </Field>
-        <p className="col-span-2 -mt-1 text-xs text-muted-foreground">If the parent group isn't in Records yet, add it as a company first, then pick it here.</p>
+        <p className="col-span-2 -mt-1 text-xs text-muted-foreground">If the parent group isn't in Records yet, add it as an organisation first, then pick it here.</p>
         <Field label="LinkedIn page" className="col-span-2">
           <Input value={linkedinUrl} onChange={(e) => setLinkedin(e.target.value)} placeholder="linkedin.com/company/…" className="h-8 text-foreground" />
+        </Field>
+        <Field label="Tags" className="col-span-2">
+          <TagPick options={options} values={tagCodes} onChange={setTags} current={org?.tags} />
         </Field>
         <Field label="Notes" className="col-span-2">
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-16 text-foreground" />
@@ -86,7 +91,7 @@ function OrganisationForm({ org, options, onClose, onSaved }: { org?: Organisati
           <label className="flex items-center justify-between gap-3">
             <span className="flex flex-col">
               <span className="font-medium">Excluded</span>
-              <span className="text-xs text-muted-foreground">Don't approach this company or any of its brands and people.</span>
+              <span className="text-xs text-muted-foreground">Don't approach this organisation or any of its brands and people.</span>
             </span>
             <Switch checked={excluded} onCheckedChange={setExcluded} aria-label="Excluded" />
           </label>
@@ -104,7 +109,7 @@ function OrganisationForm({ org, options, onClose, onSaved }: { org?: Organisati
           Cancel
         </Button>
         <Button onClick={save} disabled={busy}>
-          {org ? "Save" : "Add company"}
+          {org ? "Save" : "Add organisation"}
         </Button>
       </div>
     </>

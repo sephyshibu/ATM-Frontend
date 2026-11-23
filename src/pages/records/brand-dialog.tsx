@@ -10,16 +10,17 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { api, useApi } from "@/lib/api"
 import { countryName } from "@/lib/records"
-import type { Brand, BrandCheck, BrandDetail, Organisation, RecordOptions } from "@/lib/types"
+import type { Brand, BrandCheck, BrandDetail, Organisation, RecordOptions, TagRef } from "@/lib/types"
 
 import { attempt, useBusy } from "../settings/shared"
+import { TagPick } from "./tags"
 
 // Add or edit a brand. The website is required: it's how the CRM spots a brand that's already in Records. While
 // you type, a check shows any brand on the same website (which blocks saving) or with a similar name (a warning).
 
 const NEW = "__new__"
 
-export function BrandDialog(props: { open: boolean; brand?: Brand; organisationId?: string; options?: RecordOptions; onClose: () => void; onSaved: (b: BrandDetail) => void }) {
+export function BrandDialog(props: { open: boolean; brand?: Brand & { tags?: TagRef[] }; organisationId?: string; options?: RecordOptions; onClose: () => void; onSaved: (b: BrandDetail) => void }) {
   return (
     <Dialog open={props.open} onOpenChange={(o) => !o && props.onClose()}>
       <DialogContent className="flex max-h-[92dvh] flex-col gap-0 p-0 sm:max-w-[720px]">{props.open && <BrandForm {...props} />}</DialogContent>
@@ -48,12 +49,12 @@ function useDuplicateCheck(domain: string, name: string, exceptId?: string, orga
   return result
 }
 
-function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand?: Brand; organisationId?: string; options?: RecordOptions; onClose: () => void; onSaved: (b: BrandDetail) => void }) {
+function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand?: Brand & { tags?: TagRef[] }; organisationId?: string; options?: RecordOptions; onClose: () => void; onSaved: (b: BrandDetail) => void }) {
   const orgs = useApi<Organisation[]>("/records/organisations")
   const [name, setName] = useState(brand?.name ?? "")
   const [domain, setDomain] = useState(brand?.domain ?? "")
   const [orgId, setOrgId] = useState(brand?.organisationId ?? organisationId ?? "")
-  const [newOrg, setNewOrg] = useState({ name: "", domain: "", hqCountry: "" })
+  const [newOrg, setNewOrg] = useState({ name: "", legalEntity: "", domain: "", hqCountry: "" })
   const [categoryCode, setCategory] = useState(brand?.categoryCode ?? "")
   const [subCategoryCode, setSub] = useState(brand?.subCategoryCode ?? "")
   const [routingCode, setRouting] = useState(brand?.routingCode ?? "")
@@ -65,6 +66,7 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
   const [ownerId, setOwner] = useState(brand?.ownerId ?? "")
   const [linkedinUrl, setLinkedin] = useState(brand?.linkedinUrl ?? "")
   const [description, setDescription] = useState(brand?.description ?? "")
+  const [tagCodes, setTags] = useState<string[]>(brand?.tags?.map((t) => t.code) ?? [])
   const [tried, setTried] = useState(false)
   const [busy, run] = useBusy()
   const check = useDuplicateCheck(domain, name, brand?.id, orgId && orgId !== NEW ? orgId : undefined)
@@ -82,10 +84,12 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
     : !domain.trim()
       ? "Add the brand's website. It's how duplicates are caught."
       : !orgId
-        ? "Pick the company the brand belongs to, or add a new one."
+        ? "Pick the organisation the brand belongs to, or add a new one."
         : orgId === NEW && !newOrg.name.trim()
-          ? "Give the new company a name."
-          : revenueNumber !== null && (!Number.isInteger(revenueNumber) || revenueNumber < 0)
+          ? "Give the new organisation a name."
+          : !categoryCode || !subCategoryCode
+            ? "Pick the brand's category and sub-category."
+            : revenueNumber !== null && (!Number.isInteger(revenueNumber) || revenueNumber < 0)
             ? "Home revenue: whole US dollars, e.g. 12500000."
             : undefined
 
@@ -95,7 +99,7 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
     const body = {
       name: name.trim(),
       domain: domain.trim(),
-      ...(orgId === NEW ? (brand ? {} : { newOrganisation: { name: newOrg.name.trim(), domain: newOrg.domain, hqCountry: newOrg.hqCountry } }) : { organisationId: orgId }),
+      ...(orgId === NEW ? (brand ? {} : { newOrganisation: { name: newOrg.name.trim(), legalEntity: newOrg.legalEntity, domain: newOrg.domain, hqCountry: newOrg.hqCountry } }) : { organisationId: orgId }),
       categoryCode,
       subCategoryCode,
       routingCode,
@@ -107,6 +111,7 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
       ownerId,
       linkedinUrl,
       description,
+      tagCodes,
     }
     const r = await run(() => attempt(() => (brand ? api.patch<BrandDetail>(`/records/brands/${brand.id}`, body) : api.post<BrandDetail>("/records/brands", body)), brand ? "Saved." : `${name.trim()} added.`))
     if (r) onSaved(r)
@@ -116,7 +121,7 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
     <>
       <div className="flex flex-col gap-1 border-b px-6 py-4">
         <DialogTitle>{brand ? `Edit ${brand.name}` : "Add a brand"}</DialogTitle>
-        <DialogDescription>Name, website and company are needed. The rest can be filled in later.</DialogDescription>
+        <DialogDescription>Name, website, organisation, category and sub-category are needed. The rest can be filled in later.</DialogDescription>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">
         <div className="grid grid-cols-2 gap-3">
@@ -161,36 +166,44 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Company" className="col-span-2">
+          <Field label="Organisation (the legal entity ATM signs with)" className="col-span-2">
             <SearchPick
               options={orgOptions}
               value={orgId}
               onChange={setOrgId}
-              placeholder={orgs.loading ? "Loading…" : "Pick a company, or type a new one"}
+              placeholder={orgs.loading ? "Loading…" : "Pick an organisation, or type a new one"}
               onCreate={
                 brand
                   ? undefined
                   : (typed) => {
-                      setNewOrg({ name: typed, domain: "", hqCountry: "" })
+                      setNewOrg({ name: typed, legalEntity: "", domain: "", hqCountry: "" })
                       setOrgId(NEW)
                     }
               }
-              createLabel={(t) => `Add the new company "${t}"`}
+              createLabel={(t) => `Add the new organisation "${t}"`}
               required
-              aria-label="Company"
+              aria-label="Organisation"
             />
           </Field>
           {orgId === NEW && (
-            <div className="col-span-2 grid grid-cols-3 gap-3 rounded-lg border border-dashed p-3">
-              <Field label="New company name">
+            <div className="col-span-2 grid grid-cols-2 gap-3 rounded-lg border border-dashed p-3">
+              <Field label="New organisation name">
                 <Input value={newOrg.name} onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })} className="h-8 text-foreground" />
               </Field>
-              <Field label="Company website (optional)">
+              <Field label="Legal entity (registered name)">
+                <Input value={newOrg.legalEntity} onChange={(e) => setNewOrg({ ...newOrg, legalEntity: e.target.value })} placeholder="e.g. Glow Cosmetics Pvt Ltd" className="h-8 text-foreground" />
+              </Field>
+              <Field label="Organisation website (optional)">
                 <Input value={newOrg.domain} onChange={(e) => setNewOrg({ ...newOrg, domain: e.target.value })} className="h-8 text-foreground" />
               </Field>
               <Field label="Head office">
                 <SearchPick options={countries} value={newOrg.hqCountry} onChange={(v) => setNewOrg({ ...newOrg, hqCountry: v })} aria-label="Head office" />
               </Field>
+              {name.trim() && newOrg.name !== name.trim() && (
+                <button type="button" onClick={() => setNewOrg({ ...newOrg, name: name.trim() })} className="col-span-2 w-fit text-xs text-primary hover:underline">
+                  The brand signs on its own: use "{name.trim()}" as the organisation name
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -223,11 +236,12 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
                 setCategory(v)
                 if (v !== categoryCode) setSub("")
               }}
+              required
               aria-label="Category"
             />
           </Field>
           <Field label="Sub-category">
-            <SearchPick options={subs} value={subCategoryCode} onChange={setSub} disabled={!categoryCode} placeholder={categoryCode ? "Choose" : "Pick a category first"} aria-label="Sub-category" />
+            <SearchPick options={subs} value={subCategoryCode} onChange={setSub} disabled={!categoryCode} placeholder={!categoryCode ? "Pick a category first" : subs.length ? "Choose" : "None yet: add one in Settings → Lists"} required aria-label="Sub-category" />
           </Field>
           <Field label="Lane">
             <SearchPick options={pick("routing", brand?.routingCode)} value={routingCode} onChange={setRouting} aria-label="Lane" />
@@ -252,6 +266,9 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
           </Field>
           <Field label="LinkedIn page" className="col-span-2">
             <Input value={linkedinUrl} onChange={(e) => setLinkedin(e.target.value)} placeholder="linkedin.com/company/…" className="h-8 text-foreground" />
+          </Field>
+          <Field label="Tags" className="col-span-3">
+            <TagPick options={options} values={tagCodes} onChange={setTags} current={brand?.tags} />
           </Field>
           <Field label="About the brand" className="col-span-3">
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-16 text-foreground" />

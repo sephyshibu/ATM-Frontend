@@ -19,8 +19,10 @@ import { OrganisationDialog } from "./organisation-dialog"
 import { PersonActions } from "./person-actions"
 import { PersonDialog } from "./person-dialog"
 import { ArchivePanel, Card, EmailStatus, HistoryList, Row } from "./shared"
+import { TagChips } from "./tags"
 
-// One company: its details, its brands, everyone who works there, and its history.
+// One organisation (the legal entity ATM signs with): its details and tags, its brands, everyone who works there,
+// and its history.
 
 export function OrganisationPage() {
   const { id = "" } = useParams()
@@ -58,8 +60,8 @@ export function OrganisationPage() {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3">
-        <Link to="/records?tab=companies" className="flex w-fit items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-3.5" /> Companies
+        <Link to="/records?tab=organisations" className="flex w-fit items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-3.5" /> Organisations
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">
@@ -68,6 +70,7 @@ export function OrganisationPage() {
               {c.excluded && <Chip tone={RED}>Excluded</Chip>}
               {c.archived && <Chip tone={MUTED}>Archived</Chip>}
             </h1>
+            {c.legalEntity && c.legalEntity !== c.name && <span className="text-sm">Legal entity: {c.legalEntity}</span>}
             <div className="flex flex-wrap items-center gap-x-3 text-sm text-muted-foreground">
               {c.domain && (
                 <a href={siteUrl(c.domain)} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-foreground">
@@ -84,6 +87,7 @@ export function OrganisationPage() {
                 </span>
               )}
             </div>
+            <TagChips tags={c.tags} className="mt-1" />
           </div>
           <div className="flex items-center gap-1.5">
             {editable && (
@@ -93,22 +97,22 @@ export function OrganisationPage() {
             )}
             {can("records.archive") && (
               <MoreMenu
-                label="More options for this company"
+                label="More options for this organisation"
                 actions={[
                   c.archived
                     ? {
-                        label: "Restore company",
+                        label: "Restore organisation",
                         icon: ArchiveRestore,
                         onSelect: async () => {
                           if (await attempt(() => api.post(`/records/organisations/${c.id}/restore`), `${c.name} restored.`)) refresh()
                         },
                       }
                     : {
-                        label: "Archive company",
+                        label: "Archive organisation",
                         icon: Archive,
                         destructive: true,
                         disabled: activeBrands + activePeople + activeMembers > 0,
-                        title: activeBrands + activePeople + activeMembers > 0 ? "Archive or move its brands, people and group companies first." : undefined,
+                        title: activeBrands + activePeople + activeMembers > 0 ? "Archive or move its brands, people and group organisations first." : undefined,
                         panel: (close) => (
                           <ArchivePanel
                             what={c.name}
@@ -129,13 +133,13 @@ export function OrganisationPage() {
 
       {c.excluded && (
         <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm">
-          <span className="font-medium">Excluded{c.excludedAt ? ` since ${dateLabel(c.excludedAt)}` : ""}.</span> Don't approach this company or its brands and people.
+          <span className="font-medium">Excluded{c.excludedAt ? ` since ${dateLabel(c.excludedAt)}` : ""}.</span> Don't approach this organisation or its brands and people.
           {c.exclusionReason && <span className="text-muted-foreground"> Why: {c.exclusionReason}</span>}
         </p>
       )}
       {!c.excluded && c.parent?.excluded && (
         <p className="rounded-lg border border-[#fedf89] bg-[#fffaeb] px-3 py-2 text-sm text-[#93370d]">
-          Its parent group, {c.parent.name}, is excluded. Check before approaching this company.
+          Its parent group, {c.parent.name}, is excluded. Check before approaching this organisation.
         </p>
       )}
 
@@ -153,7 +157,7 @@ export function OrganisationPage() {
         </div>
         <TabsContent value="details" className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div className="flex flex-col gap-4">
-            <Card title="Company details">
+            <Card title="Organisation details">
               <dl className="text-sm">
                 <Row label="Legal entity">{c.legalEntity}</Row>
                 <Row label="Website">{c.domain}</Row>
@@ -177,7 +181,7 @@ export function OrganisationPage() {
               </dl>
             </Card>
             {c.members.length > 0 && (
-              <Card title={`Companies in this group (${c.members.filter((m) => !m.archivedAt).length})`}>
+              <Card title={`Organisations in this group (${c.members.filter((m) => !m.archivedAt).length})`}>
                 <ul className="-my-2 divide-y">
                   {c.members
                     .filter((m) => showArchived || !m.archivedAt)
@@ -267,7 +271,7 @@ export function OrganisationPage() {
         </TabsContent>
         <TabsContent value="history">
           <Card title="History">{history.error ? <LoadError message={history.error} retry={history.reload} /> : history.data ? <HistoryList entries={history.data} /> : <Loading />}</Card>
-          <p className="mt-2 text-xs text-muted-foreground">Changes to this company, its brands and its people. Nothing here can be edited or removed.</p>
+          <p className="mt-2 text-xs text-muted-foreground">Changes to this organisation, its brands and its people. Nothing here can be edited or removed.</p>
         </TabsContent>
       </Tabs>
 

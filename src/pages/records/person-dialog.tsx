@@ -14,7 +14,7 @@ import type { Organisation, OrganisationDetail, Person, PersonRow, RecordOptions
 
 import { attempt, useBusy } from "../settings/shared"
 
-// Add or edit a person. A person belongs to one company and can work on several of its brands. An email belongs
+// Add or edit a person. A person belongs to one organisation and can work on several of its brands. An email belongs
 // to one active person, so the same contact isn't added twice.
 
 export function PersonDialog(props: { open: boolean; person?: Person; organisationId?: string; brandId?: string; options?: RecordOptions; onClose: () => void; onSaved: (p: PersonRow) => void }) {
@@ -49,7 +49,7 @@ function PersonForm({ person, organisationId, brandId, options, onClose, onSaved
   const pick = (list: keyof RecordOptions["lists"], keep?: string | null) => (options?.lists[list] ?? []).filter((o) => !o.retired || o.code === keep).map((o) => ({ value: o.code, label: o.label }))
   const activeBrands = (org.data?.brands ?? []).filter((b) => !b.archivedAt)
 
-  const error = !firstName.trim() ? "Add a first name." : !orgId ? "Pick the company they work for." : email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()) ? "Enter a valid email address." : undefined
+  const error = !firstName.trim() ? "Add a first name." : !orgId ? "Pick the organisation they work for." : email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()) ? "Enter a valid email address." : undefined
 
   const save = async () => {
     setTried(true)
@@ -68,11 +68,11 @@ function PersonForm({ person, organisationId, brandId, options, onClose, onSaved
     <>
       <div className="flex flex-col gap-1 border-b px-6 py-4">
         <DialogTitle>{person ? `Edit ${personName(person)}` : "Add a person"}</DialogTitle>
-        <DialogDescription>Someone at the brand's company: a contact for outreach and calls.</DialogDescription>
+        <DialogDescription>Someone at the brand's organisation: a contact for outreach and calls.</DialogDescription>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">
         {!fixedOrg && (
-          <Field label="Company">
+          <Field label="Organisation">
             <SearchPick
               options={(orgs.data ?? []).filter((o) => !o.archived).map((o) => ({ value: o.id, label: o.name, hint: o.domain ?? undefined }))}
               value={orgId}
@@ -81,8 +81,8 @@ function PersonForm({ person, organisationId, brandId, options, onClose, onSaved
                 setBrandIds([])
               }}
               required
-              placeholder={orgs.loading ? "Loading…" : "Pick a company"}
-              aria-label="Company"
+              placeholder={orgs.loading ? "Loading…" : "Pick an organisation"}
+              aria-label="Organisation"
             />
           </Field>
         )}
@@ -146,7 +146,7 @@ function PersonForm({ person, organisationId, brandId, options, onClose, onSaved
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-muted-foreground">{org.loading ? "Loading brands…" : "This company has no brands yet."}</p>
+              <p className="text-xs text-muted-foreground">{org.loading ? "Loading brands…" : "This organisation has no brands yet."}</p>
             )}
           </div>
         )}

@@ -19,9 +19,12 @@ import { attempt, LoadError, Loading } from "../settings/shared"
 import { BrandDialog } from "./brand-dialog"
 import { PersonActions } from "./person-actions"
 import { PersonDialog } from "./person-dialog"
+import { ProductsCard } from "./products-card"
 import { ArchivePanel, Card, EmailStatus, HistoryList, Row } from "./shared"
+import { TagChips } from "./tags"
 
-// One brand: its details, the people at the company who work on it (one can be the main contact), and its history.
+// One brand: its details and tags, its products, the people at its organisation who work on it (one can be the
+// main contact), and its history.
 
 export function BrandPage() {
   const { id = "" } = useParams()
@@ -56,7 +59,7 @@ export function BrandPage() {
           <div className="flex min-w-0 flex-col gap-1">
             <h1 className="flex flex-wrap items-center gap-2 text-xl font-semibold tracking-[-0.01em]">
               {b.name}
-              {b.organisation.excluded && <Chip tone={RED}>Company excluded</Chip>}
+              {b.organisation.excluded && <Chip tone={RED}>Organisation excluded</Chip>}
               {b.archived && <Chip tone={MUTED}>Archived</Chip>}
             </h1>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
@@ -74,6 +77,7 @@ export function BrandPage() {
               {b.routingCode && <Chip tone={VIOLET}>Lane: {label("routing", b.routingCode)}</Chip>}
               {b.tierCode && <Chip tone={AMBER}>{label("tier", b.tierCode)}</Chip>}
             </div>
+            <TagChips tags={b.tags} className="mt-1" />
           </div>
           <div className="flex items-center gap-1.5">
             {editable && (
@@ -128,9 +132,10 @@ export function BrandPage() {
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
         <TabsContent value="details" className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+          <div className="flex flex-col gap-4">
           <Card title="Brand details">
             <dl className="text-sm">
-              <Row label="Company">
+              <Row label="Organisation">
                 <Link to={`/records/organisations/${b.organisation.id}`} className="hover:underline">
                   {b.organisation.name}
                 </Link>
@@ -157,6 +162,8 @@ export function BrandPage() {
               <Row label="Added">{`${dateLabel(b.createdAt)} · ${b.source === "manual" ? "by hand" : b.source}`}</Row>
             </dl>
           </Card>
+          <ProductsCard brand={b} options={o} onChanged={refresh} />
+          </div>
 
           <Card
             title={`People (${b.people.length})`}
@@ -203,7 +210,7 @@ export function BrandPage() {
         </TabsContent>
         <TabsContent value="history">
           <Card title="History">{history.error ? <LoadError message={history.error} retry={history.reload} /> : history.data ? <HistoryList entries={history.data} /> : <Loading />}</Card>
-          <p className="mt-2 text-xs text-muted-foreground">Changes to this brand, its company and its people. Nothing here can be edited or removed.</p>
+          <p className="mt-2 text-xs text-muted-foreground">Changes to this brand, its products, its organisation and its people. Nothing here can be edited or removed.</p>
         </TabsContent>
       </Tabs>
 
@@ -232,7 +239,7 @@ export function BrandPage() {
   )
 }
 
-/** Link someone who already works at the brand's company. */
+/** Link someone who already works at the brand's organisation. */
 function LinkExisting({ brand, onLinked }: { brand: BrandDetail; onLinked: () => void }) {
   const [open, setOpen] = useState(false)
   const people = useApi<PersonRow[]>(open ? `/records/people?organisationId=${brand.organisationId}` : null)
@@ -263,7 +270,7 @@ function LinkExisting({ brand, onLinked }: { brand: BrandDetail; onLinked: () =>
             }}
           />
         ) : (
-          <p className="text-xs">Everyone at the company is already linked. Add a new person instead.</p>
+          <p className="text-xs">Everyone at the organisation is already linked. Add a new person instead.</p>
         )}
       </PopoverContent>
     </Popover>

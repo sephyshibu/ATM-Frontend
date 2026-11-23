@@ -98,12 +98,15 @@ export type AuditPage = { entries: AuditEntry[]; next: string | null }
 export type ListOption = { code: string; label: string; parentCode: string | null; retired: boolean }
 
 export type RecordOptions = {
-  lists: Record<"category" | "sub_category" | "routing" | "tier" | "buying_role" | "consent_basis" | "archive_reason", ListOption[]>
+  lists: Record<"category" | "sub_category" | "routing" | "tier" | "buying_role" | "consent_basis" | "archive_reason" | "tag", ListOption[]>
   countries: string[]
   owners: { id: string; name: string; email: string }[]
 }
 
 type Audited = { createdAt: string; updatedAt: string; archivedAt: string | null; archived: boolean }
+
+/** A tag on a record: a value of the Tags list. */
+export type TagRef = { code: string; label: string }
 
 export type Organisation = Audited & {
   id: string
@@ -118,6 +121,7 @@ export type Organisation = Audited & {
   exclusionReason: string | null
   excludedAt: string | null
   parent?: { id: string; name: string } | null
+  tags?: TagRef[]
   brandCount?: number
   peopleCount?: number
 }
@@ -150,7 +154,19 @@ export type Brand = Audited & {
   linkedinUrl: string | null
 }
 
-export type BrandRow = Brand & { organisation: { id: string; name: string; excluded: boolean }; owner: { id: string; name: string } | null; peopleCount: number }
+export type BrandRow = Brand & { organisation: { id: string; name: string; excluded: boolean }; owner: { id: string; name: string } | null; peopleCount: number; productCount: number; tags: TagRef[] }
+
+/** A brand's product. Empty category and sub-category: it takes the brand's. */
+export type Product = Audited & {
+  id: string
+  brandId: string
+  name: string
+  sku: string | null
+  categoryCode: string | null
+  subCategoryCode: string | null
+  description: string
+  tags: TagRef[]
+}
 
 export type Person = Audited & {
   id: string
@@ -174,12 +190,14 @@ export type BrandDetail = Brand & {
   organisation: Organisation
   owner: { id: string; name: string; email: string } | null
   people: (Person & { isPrimary: boolean; linkedAt: string })[]
+  tags: TagRef[]
+  products: Product[]
 }
 
 export type BrandCheck = {
   domain: string | null
   sameDomain: { id: string; name: string; domain: string; archived: boolean; organisation: { name: string } }[]
   similar: { id: string; name: string; domain: string; organisation: { name: string } }[]
-  /** Brands of other companies in the same parent group. */
+  /** Brands of other organisations in the same parent group. */
   sameGroup: { group: { id: string; name: string }; brands: { id: string; name: string; domain: string; organisation: { name: string } }[] } | null
 }
