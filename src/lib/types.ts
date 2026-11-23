@@ -92,3 +92,94 @@ export type AuditEntry = {
 }
 
 export type AuditPage = { entries: AuditEntry[]; next: string | null }
+
+// ---------------------------------------------------------------- Records
+
+export type ListOption = { code: string; label: string; parentCode: string | null; retired: boolean }
+
+export type RecordOptions = {
+  lists: Record<"category" | "sub_category" | "routing" | "tier" | "buying_role" | "consent_basis" | "archive_reason", ListOption[]>
+  countries: string[]
+  owners: { id: string; name: string; email: string }[]
+}
+
+type Audited = { createdAt: string; updatedAt: string; archivedAt: string | null; archived: boolean }
+
+export type Organisation = Audited & {
+  id: string
+  name: string
+  domain: string | null
+  hqCountry: string | null
+  linkedinUrl: string | null
+  notes: string
+  parentId: string | null
+  legalEntity: string | null
+  excluded: boolean
+  exclusionReason: string | null
+  excludedAt: string | null
+  parent?: { id: string; name: string } | null
+  brandCount?: number
+  peopleCount?: number
+}
+
+type GroupCompany = { id: string; name: string; domain: string | null; excluded: boolean; archivedAt: string | null }
+
+export type OrganisationDetail = Organisation & {
+  brands: { id: string; name: string; domain: string; categoryCode: string | null; routingCode: string | null; archivedAt: string | null }[]
+  people: { id: string; firstName: string; lastName: string; jobTitle: string; email: string | null; archivedAt: string | null }[]
+  parent: GroupCompany | null
+  members: GroupCompany[]
+}
+
+export type Brand = Audited & {
+  id: string
+  organisationId: string
+  name: string
+  domain: string
+  categoryCode: string | null
+  subCategoryCode: string | null
+  routingCode: string | null
+  homeCountry: string | null
+  homeRevenueUsd: number | null
+  revenueYear: number | null
+  asianMarketsLive: string[]
+  tierCode: string | null
+  ownerId: string | null
+  source: string
+  description: string
+  linkedinUrl: string | null
+}
+
+export type BrandRow = Brand & { organisation: { id: string; name: string; excluded: boolean }; owner: { id: string; name: string } | null; peopleCount: number }
+
+export type Person = Audited & {
+  id: string
+  organisationId: string
+  firstName: string
+  lastName: string
+  jobTitle: string
+  email: string | null
+  emailStatus: "unknown" | "verified" | "invalid"
+  phone: string | null
+  linkedinUrl: string | null
+  country: string | null
+  buyingRoleCode: string | null
+  consentCode: string | null
+  notes: string
+}
+
+export type PersonRow = Person & { organisation: { id: string; name: string }; brands: { id: string; name: string; archivedAt: string | null; isPrimary: boolean }[] }
+
+export type BrandDetail = Brand & {
+  organisation: Organisation
+  owner: { id: string; name: string; email: string } | null
+  people: (Person & { isPrimary: boolean; linkedAt: string })[]
+}
+
+export type BrandCheck = {
+  domain: string | null
+  sameDomain: { id: string; name: string; domain: string; archived: boolean; organisation: { name: string } }[]
+  similar: { id: string; name: string; domain: string; organisation: { name: string } }[]
+  /** Brands of other companies in the same parent group. */
+  sameGroup: { group: { id: string; name: string }; brands: { id: string; name: string; domain: string; organisation: { name: string } }[] } | null
+}

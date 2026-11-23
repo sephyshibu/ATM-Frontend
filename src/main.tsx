@@ -11,6 +11,9 @@ import { initThemeMode } from "@/lib/theme"
 import { InvitePage } from "@/pages/invite"
 import { LoginPage } from "@/pages/login"
 import { NoAccessPage } from "@/pages/no-access"
+import { RecordsPage } from "@/pages/records"
+import { BrandPage } from "@/pages/records/brand-page"
+import { OrganisationPage } from "@/pages/records/organisation-page"
 import { SettingsPage } from "@/pages/settings"
 
 initThemeMode()
@@ -22,6 +25,9 @@ const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { path: "/", element: <Home /> },
+      { path: "/records", element: <RecordsPage /> },
+      { path: "/records/brands/:id", element: <BrandPage /> },
+      { path: "/records/organisations/:id", element: <OrganisationPage /> },
       { path: "/settings", element: <SettingsPage /> },
       { path: "/no-access", element: <NoAccessPage /> },
       { path: "*", element: <Home /> },

@@ -39,6 +39,7 @@ src/lib/session.tsx       the signed-in person and can("permission")
 src/lib/google.ts         the Sign in with Google address
 src/pages/login.tsx       sign-in
 src/pages/invite.tsx      the invite link's page
+src/pages/records/        brands, companies, people: lists, record pages, add/edit forms
 src/pages/settings/       users, roles, config, lists, change-log
 src/components/ui/        the shadcn kit (from the prototype)
 src/components/common/    chips, menus, toolbar, toasts (from the prototype)

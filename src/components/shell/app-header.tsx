@@ -1,6 +1,6 @@
 import { LogOut, Monitor, Moon, Settings, Sun } from "lucide-react"
 import { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, NavLink, useNavigate } from "react-router-dom"
 
 import { Logo } from "@/components/brand/logo"
 import { PersonAvatar } from "@/components/common/person-avatar"
@@ -24,8 +24,33 @@ import {
 import { useSession } from "@/lib/session"
 import { useThemeMode, type ThemeMode } from "@/lib/theme"
 import type { Me } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
-// The app's header: ATM's mark with the area's name, and the account menu.
+// The app's header: ATM's mark with the area's name, the areas this person can open, and the account menu.
+
+const AREAS = [
+  { to: "/records", label: "Records", permission: "records.view" },
+  { to: "/settings", label: "Settings", permission: "settings.view" },
+]
+
+function AreaNav() {
+  const { can } = useSession()
+  const shown = AREAS.filter((a) => can(a.permission))
+  if (shown.length < 2) return null
+  return (
+    <nav aria-label="Areas" className="flex items-center gap-1">
+      {shown.map((a) => (
+        <NavLink
+          key={a.to}
+          to={a.to}
+          className={({ isActive }) => cn("rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground", isActive && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary")}
+        >
+          {a.label}
+        </NavLink>
+      ))}
+    </nav>
+  )
+}
 
 const THEMES: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
   { value: "light", label: "Light", icon: Sun },
@@ -131,6 +156,7 @@ export function AppHeader({ me, area, home }: { me: Me; area: string; home: stri
           <Logo area={area} />
         </Link>
         <div className="flex shrink-0 items-center gap-2">
+          <AreaNav />
           <UserMenu me={me} />
         </div>
       </div>

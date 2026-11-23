@@ -7,8 +7,9 @@ import type { Me } from "@/lib/types"
 
 import { AppHeader } from "./app-header"
 
-/** The first area this person can open. Settings is the only one built so far. */
+/** The first area this person can open: Records, then Settings. */
 export function homeFor(me: Me | null) {
+  if (me?.permissions.includes("records.view")) return "/records"
   if (me?.permissions.includes("settings.view")) return "/settings"
   return "/no-access"
 }
@@ -26,7 +27,7 @@ export function AppLayout() {
   if (!me) return <Navigate to="/login" replace state={{ from: `${pathname}${search}` }} />
   return (
     <div className="flex min-h-screen flex-col">
-      <AppHeader me={me} area="Settings" home={homeFor(me)} />
+      <AppHeader me={me} area={pathname.startsWith("/records") ? "Records" : pathname.startsWith("/settings") ? "Settings" : "ATM"} home={homeFor(me)} />
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-6 py-6">
         <Outlet />
       </main>

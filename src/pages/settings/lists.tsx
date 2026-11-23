@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils"
 
 import { attempt, LoadError, Loading, SectionCard, useBusy } from "./shared"
 
-// Lists: the pick-lists people choose from (categories, sub-categories, routing, reason codes). A value's code
+// Lists: the pick-lists people choose from (categories, sub-categories, lanes, reason codes). A value's code
 // never changes; its name can. Values are retired, never deleted, so records that used them still read right.
 
 const ROW = "grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_110px_28px] items-center gap-3 px-4"
