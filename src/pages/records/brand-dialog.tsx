@@ -13,6 +13,7 @@ import { countryName } from "@/lib/records"
 import type { Brand, BrandCheck, BrandDetail, Organisation, RecordOptions, TagRef } from "@/lib/types"
 
 import { attempt, useBusy } from "../settings/shared"
+import { CustomFieldInputs, customPayload, fieldsFor, missingRequired } from "./custom-fields"
 import { TagPick } from "./tags"
 
 // Add or edit a brand. The website is required: it's how the CRM spots a brand that's already in Records. While
@@ -67,6 +68,9 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
   const [linkedinUrl, setLinkedin] = useState(brand?.linkedinUrl ?? "")
   const [description, setDescription] = useState(brand?.description ?? "")
   const [tagCodes, setTags] = useState<string[]>(brand?.tags?.map((t) => t.code) ?? [])
+  const [custom, setCustom] = useState<Record<string, unknown>>(brand?.custom ?? {})
+  const customFields = fieldsFor(options, "brand", brand?.custom)
+  const customMissing = missingRequired(customFields, custom)
   const [tried, setTried] = useState(false)
   const [busy, run] = useBusy()
   const check = useDuplicateCheck(domain, name, brand?.id, orgId && orgId !== NEW ? orgId : undefined)
@@ -89,7 +93,9 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
           ? "Give the new organisation a name."
           : !categoryCode || !subCategoryCode
             ? "Pick the brand's category and sub-category."
-            : revenueNumber !== null && (!Number.isInteger(revenueNumber) || revenueNumber < 0)
+            : customMissing
+              ? `${customMissing.label} is required.`
+              : revenueNumber !== null && (!Number.isInteger(revenueNumber) || revenueNumber < 0)
             ? "Home revenue: whole US dollars, e.g. 12500000."
             : undefined
 
@@ -112,6 +118,7 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
       linkedinUrl,
       description,
       tagCodes,
+      custom: customPayload(customFields, custom),
     }
     const r = await run(() => attempt(() => (brand ? api.patch<BrandDetail>(`/records/brands/${brand.id}`, body) : api.post<BrandDetail>("/records/brands", body)), brand ? "Saved." : `${name.trim()} added.`))
     if (r) onSaved(r)
@@ -270,6 +277,7 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
           <Field label="Tags" className="col-span-3">
             <TagPick options={options} values={tagCodes} onChange={setTags} current={brand?.tags} />
           </Field>
+          <CustomFieldInputs fields={customFields} values={custom} onChange={setCustom} tried={tried} />
           <Field label="About the brand" className="col-span-3">
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-16 text-foreground" />
           </Field>

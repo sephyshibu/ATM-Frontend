@@ -98,10 +98,39 @@ export type AuditPage = { entries: AuditEntry[]; next: string | null }
 export type ListOption = { code: string; label: string; parentCode: string | null; retired: boolean }
 
 export type RecordOptions = {
-  lists: Record<"category" | "sub_category" | "routing" | "tier" | "buying_role" | "consent_basis" | "archive_reason" | "tag", ListOption[]>
+  lists: Record<"category" | "sub_category" | "routing" | "tier" | "buying_role" | "consent_basis" | "archive_reason" | "tag" | "disqualify_reason" | "override_reason", ListOption[]>
   countries: string[]
   owners: { id: string; name: string; email: string }[]
+  /** Brand and product fields added in Settings → Fields (retired ones too). */
+  fields: CustomField[]
 }
+
+export type FieldType = "text" | "long_text" | "number" | "date" | "yes_no" | "choice" | "multi_choice"
+
+/** A field added in Settings → Fields. Values live in the record's `custom` by `key`. */
+export type CustomField = {
+  id: string
+  entityType: "organisation" | "brand" | "product" | "person"
+  key: string
+  label: string
+  type: FieldType
+  options: string[]
+  required: boolean
+  help: string
+  sortOrder: number
+  retiredAt: string | null
+}
+
+export type CustomValues = Record<string, string | number | boolean | string[] | null>
+
+/** A field a file's column can be mapped to. `custom.<key>` for fields from Settings → Fields. */
+export type ImportTarget = { key: string; label: string; required: boolean; hint: string; aliases: string[]; group: string }
+
+export type ImportRowResult = { row: number; ok: boolean; reasons: string[]; warnings: string[]; summary: string }
+
+export type ImportCheck = { total: number; ready: number; rejected: number; newOrganisations?: number; leadsOpened?: number; rows: ImportRowResult[] }
+
+export type ImportDone = ImportCheck & { batchId: string; imported: number }
 
 type Audited = { createdAt: string; updatedAt: string; archivedAt: string | null; archived: boolean }
 
@@ -122,6 +151,7 @@ export type Organisation = Audited & {
   excludedAt: string | null
   parent?: { id: string; name: string } | null
   tags?: TagRef[]
+  custom?: CustomValues
   brandCount?: number
   peopleCount?: number
 }
@@ -152,6 +182,7 @@ export type Brand = Audited & {
   source: string
   description: string
   linkedinUrl: string | null
+  custom: CustomValues
 }
 
 export type BrandRow = Brand & { organisation: { id: string; name: string; excluded: boolean }; owner: { id: string; name: string } | null; peopleCount: number; productCount: number; tags: TagRef[] }
@@ -165,6 +196,8 @@ export type Product = Audited & {
   categoryCode: string | null
   subCategoryCode: string | null
   description: string
+  custom: CustomValues
+  source: string
   tags: TagRef[]
 }
 
@@ -182,6 +215,7 @@ export type Person = Audited & {
   buyingRoleCode: string | null
   consentCode: string | null
   notes: string
+  custom?: CustomValues
 }
 
 export type PersonRow = Person & { organisation: { id: string; name: string }; brands: { id: string; name: string; archivedAt: string | null; isPrimary: boolean }[] }
@@ -200,4 +234,74 @@ export type BrandCheck = {
   similar: { id: string; name: string; domain: string; organisation: { name: string } }[]
   /** Brands of other organisations in the same parent group. */
   sameGroup: { group: { id: string; name: string }; brands: { id: string; name: string; domain: string; organisation: { name: string } }[] } | null
+}
+
+// ---------------------------------------------------------------- Leads
+
+export type LeadMove = {
+  id: string
+  moveKey: string
+  kind: "person" | "system" | "override" | "undo"
+  label: string
+  from: string | null
+  to: string
+  toUntil: string | null
+  reasonCode: string | null
+  reason: string | null
+  actorLabel: string
+  at: string
+  undoneAt: string | null
+}
+
+export type Lead = {
+  id: string
+  brandId: string
+  personId: string | null
+  source: string
+  stage: string
+  lane: string | null
+  laneUntil: string | null
+  flags: string[]
+  flagLabels: string[]
+  stageChangedAt: string
+  closedAt: string | null
+  closed: boolean
+  position: string
+  createdAt: string
+}
+
+export type LeadRow = Lead & {
+  brand: { id: string; name: string; domain: string; routingCode: string | null; tierCode: string | null; organisation: { id: string; name: string; excluded: boolean } }
+  person: { id: string; firstName: string; lastName: string; email: string | null; emailStatus: string } | null
+  lastMove: LeadMove | null
+}
+
+export type AvailableMove = {
+  key: string
+  label: string
+  help: string
+  allowed: boolean
+  reasonList: string | null
+  reasonRequired: boolean
+  untilRequired: boolean
+  ends: boolean
+  to: string
+  blockers: string[]
+  warnings: string[]
+}
+
+export type LeadDetail = Lead & {
+  person: { id: string; firstName: string; lastName: string; email: string | null; emailStatus: string; linkedinUrl: string | null; buyingRoleCode: string | null } | null
+  moves: LeadMove[]
+  available: AvailableMove[]
+  events: { type: string; label: string; to: string }[]
+  canUndo: boolean
+  undoLabel: string | null
+}
+
+export type Journey = {
+  stages: { key: string; label: string }[]
+  lanes: { key: string; label: string }[]
+  events: { type: string; label: string }[]
+  flags: Record<string, string>
 }

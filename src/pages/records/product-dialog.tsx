@@ -11,6 +11,7 @@ import { optionLabel } from "@/lib/records"
 import type { Product, RecordOptions } from "@/lib/types"
 
 import { attempt, useBusy } from "../settings/shared"
+import { CustomFieldInputs, customPayload, fieldsFor, missingRequired } from "./custom-fields"
 import { TagPick } from "./tags"
 
 // Add or edit a product of a brand (Garnier → face wash). Category and sub-category are optional: left empty,
@@ -33,6 +34,9 @@ function ProductForm({ brand, product, options, onClose, onSaved }: { brand: Bra
   const [subCategoryCode, setSub] = useState(product?.subCategoryCode ?? "")
   const [description, setDescription] = useState(product?.description ?? "")
   const [tagCodes, setTags] = useState(product?.tags.map((t) => t.code) ?? [])
+  const [custom, setCustom] = useState<Record<string, unknown>>(product?.custom ?? {})
+  const customFields = fieldsFor(options, "product", product?.custom)
+  const customMissing = missingRequired(customFields, custom)
   const [tried, setTried] = useState(false)
   const [busy, run] = useBusy()
 
@@ -43,8 +47,8 @@ function ProductForm({ brand, product, options, onClose, onSaved }: { brand: Bra
 
   const save = async () => {
     setTried(true)
-    if (!name.trim()) return
-    const body = { name: name.trim(), sku, categoryCode, subCategoryCode, description, tagCodes }
+    if (!name.trim() || customMissing) return
+    const body = { name: name.trim(), sku, categoryCode, subCategoryCode, description, tagCodes, custom: customPayload(customFields, custom) }
     const r = await run(() =>
       attempt(() => (product ? api.patch<Product[]>(`/records/products/${product.id}`, body) : api.post<Product[]>(`/records/brands/${brand.id}/products`, body)), product ? "Saved." : `${name.trim()} added.`),
     )
@@ -82,10 +86,11 @@ function ProductForm({ brand, product, options, onClose, onSaved }: { brand: Bra
         <Field label="Tags" className="col-span-2">
           <TagPick options={options} values={tagCodes} onChange={setTags} current={product?.tags} />
         </Field>
+        <CustomFieldInputs fields={customFields} values={custom} onChange={setCustom} tried={tried} />
         <Field label="Description" className="col-span-2">
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-16 text-foreground" />
         </Field>
-        {tried && !name.trim() && <p className="col-span-2 text-xs text-destructive">Give the product a name.</p>}
+        {tried && (!name.trim() || customMissing) && <p className="col-span-2 text-xs text-destructive">{!name.trim() ? "Give the product a name." : `${customMissing!.label} is required.`}</p>}
       </div>
       <div className="flex justify-end gap-2 border-t px-6 py-3">
         <Button variant="ghost" onClick={onClose}>

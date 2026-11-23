@@ -12,6 +12,7 @@ import { countryName } from "@/lib/records"
 import type { Organisation, OrganisationDetail, RecordOptions } from "@/lib/types"
 
 import { attempt, useBusy } from "../settings/shared"
+import { CustomFieldInputs, customPayload, fieldsFor, missingRequired } from "./custom-fields"
 import { TagPick } from "./tags"
 
 // Add or edit an organisation: the legal entity ATM signs with, holding one or more brands (a brand that signs on
@@ -36,6 +37,9 @@ function OrganisationForm({ org, options, onClose, onSaved }: { org?: Organisati
   const [linkedinUrl, setLinkedin] = useState(org?.linkedinUrl ?? "")
   const [notes, setNotes] = useState(org?.notes ?? "")
   const [tagCodes, setTags] = useState<string[]>(org?.tags?.map((t) => t.code) ?? [])
+  const [custom, setCustom] = useState<Record<string, unknown>>(org?.custom ?? {})
+  const customFields = fieldsFor(options, "organisation", org?.custom)
+  const customMissing = missingRequired(customFields, custom)
   const [excluded, setExcluded] = useState(org?.excluded ?? false)
   const [why, setWhy] = useState("")
   const [tried, setTried] = useState(false)
@@ -44,12 +48,12 @@ function OrganisationForm({ org, options, onClose, onSaved }: { org?: Organisati
   const groups = (all.data ?? []).filter((o) => !o.archived && o.id !== org?.id).map((o) => ({ value: o.id, label: o.name, hint: o.domain ?? undefined }))
   const exclusionChanged = excluded !== (org?.excluded ?? false)
 
-  const error = !name.trim() ? "Give the organisation a name." : exclusionChanged && !why.trim() ? (excluded ? "Say why this organisation is excluded." : "Say why the exclusion is lifted.") : undefined
+  const error = !name.trim() ? "Give the organisation a name." : customMissing ? `${customMissing.label} is required.` : exclusionChanged && !why.trim() ? (excluded ? "Say why this organisation is excluded." : "Say why the exclusion is lifted.") : undefined
 
   const save = async () => {
     setTried(true)
     if (error) return
-    const body = { name: name.trim(), legalEntity, domain, parentId: parentId || null, hqCountry, linkedinUrl, notes, tagCodes, ...(exclusionChanged ? { excluded, exclusionReason: why.trim() } : {}) }
+    const body = { name: name.trim(), legalEntity, domain, parentId: parentId || null, hqCountry, linkedinUrl, notes, tagCodes, custom: customPayload(customFields, custom), ...(exclusionChanged ? { excluded, exclusionReason: why.trim() } : {}) }
     const r = await run(() => attempt(() => (org ? api.patch<OrganisationDetail>(`/records/organisations/${org.id}`, body) : api.post<OrganisationDetail>("/records/organisations", body)), org ? "Saved." : `${name.trim()} added.`))
     if (r) onSaved(r)
   }
@@ -83,6 +87,7 @@ function OrganisationForm({ org, options, onClose, onSaved }: { org?: Organisati
         <Field label="Tags" className="col-span-2">
           <TagPick options={options} values={tagCodes} onChange={setTags} current={org?.tags} />
         </Field>
+        <CustomFieldInputs fields={customFields} values={custom} onChange={setCustom} tried={tried} />
         <Field label="Notes" className="col-span-2">
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-16 text-foreground" />
         </Field>

@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, Pencil, Plus } from "lucide-react"
+import { Archive, ArchiveRestore, FileSpreadsheet, Pencil, Plus } from "lucide-react"
 import { useState } from "react"
 
 import { Chip } from "@/components/common/chip"
@@ -11,6 +11,8 @@ import { useSession } from "@/lib/session"
 import type { BrandDetail, Product, RecordOptions } from "@/lib/types"
 
 import { attempt } from "../settings/shared"
+import { fieldsFor, showValue } from "./custom-fields"
+import { ImportWizard } from "./import-wizard"
 import { ProductDialog } from "./product-dialog"
 import { ArchivePanel, Card } from "./shared"
 import { TagChips } from "./tags"
@@ -21,6 +23,8 @@ export function ProductsCard({ brand, options, onChanged }: { brand: BrandDetail
   const { can } = useSession()
   const [editing, setEditing] = useState<Product | "new" | null>(null)
   const [showArchived, setShowArchived] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const fields = fieldsFor(options, "product")
   const editable = can("records.edit") && !brand.archived
   const active = brand.products.filter((p) => !p.archived)
   const shown = showArchived ? brand.products : active
@@ -37,6 +41,11 @@ export function ProductsCard({ brand, options, onChanged }: { brand: BrandDetail
             <button type="button" onClick={() => setShowArchived((v) => !v)} className="text-xs text-primary hover:underline">
               {showArchived ? "Hide archived" : `Show archived (${archivedCount})`}
             </button>
+          )}
+          {can("kb.import") && !brand.archived && (
+            <Button size="sm" variant="outline" onClick={() => setImporting(true)}>
+              <FileSpreadsheet /> Import
+            </Button>
           )}
           {editable && (
             <Button size="sm" variant="outline" onClick={() => setEditing("new")}>
@@ -57,6 +66,15 @@ export function ProductsCard({ brand, options, onChanged }: { brand: BrandDetail
                   {p.archived && <Chip tone={MUTED}>Archived</Chip>}
                 </span>
                 <span className="text-xs text-muted-foreground">{categoryOf(p)}</span>
+                {fields.some((f) => showValue(p.custom?.[f.key])) && (
+                  <span className="text-xs text-muted-foreground">
+                    {fields
+                      .filter((f) => showValue(p.custom?.[f.key]))
+                      .slice(0, 4)
+                      .map((f) => `${f.label}: ${showValue(p.custom[f.key])}`)
+                      .join(" · ")}
+                  </span>
+                )}
                 <TagChips tags={p.tags} className="mt-0.5" />
               </div>
               {(editable || (can("records.archive") && !brand.archived)) && (
@@ -97,8 +115,9 @@ export function ProductsCard({ brand, options, onChanged }: { brand: BrandDetail
           ))}
         </ul>
       ) : (
-        <p className="text-muted-foreground">No products yet.{editable ? " Add what the brand sells, e.g. face wash, body wash." : ""}</p>
+        <p className="text-muted-foreground">No products yet.{editable ? " Add what the brand sells, e.g. face wash, body wash, or import a list from Excel." : ""}</p>
       )}
+      <ImportWizard open={importing} kind="products" brand={brand} onClose={() => setImporting(false)} onImported={onChanged} />
       <ProductDialog
         open={editing !== null}
         brand={brand}

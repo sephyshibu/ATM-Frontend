@@ -16,11 +16,13 @@ import { useSession } from "@/lib/session"
 import type { AuditEntry, BrandDetail, PersonRow } from "@/lib/types"
 
 import { attempt, LoadError, Loading } from "../settings/shared"
+import { LeadCard } from "../leads/lead-card"
 import { BrandDialog } from "./brand-dialog"
 import { PersonActions } from "./person-actions"
 import { PersonDialog } from "./person-dialog"
 import { ProductsCard } from "./products-card"
 import { ArchivePanel, Card, EmailStatus, HistoryList, Row } from "./shared"
+import { CustomFieldRows, fieldsFor } from "./custom-fields"
 import { TagChips } from "./tags"
 
 // One brand: its details and tags, its products, the people at its organisation who work on it (one can be the
@@ -126,6 +128,8 @@ export function BrandPage() {
         {b.archived && <p className="rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">This brand is archived{b.archivedAt ? ` since ${dateLabel(b.archivedAt)}` : ""}. Nothing was deleted; restore it to work on it again.</p>}
       </div>
 
+      {can("records.view") && <LeadCard brand={b} options={o} />}
+
       <Tabs value={tab} onValueChange={setTab} className="gap-4">
         <TabsList variant="line">
           <TabsTrigger value="details">Details</TabsTrigger>
@@ -159,6 +163,7 @@ export function BrandPage() {
                 )}
               </Row>
               <Row label="About">{b.description && <span className="whitespace-pre-wrap">{b.description}</span>}</Row>
+              <CustomFieldRows fields={fieldsFor(o, "brand", b.custom)} values={b.custom} />
               <Row label="Added">{`${dateLabel(b.createdAt)} · ${b.source === "manual" ? "by hand" : b.source}`}</Row>
             </dl>
           </Card>

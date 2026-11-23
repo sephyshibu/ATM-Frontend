@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils"
 // The app's header: ATM's mark with the area's name, the areas this person can open, and the account menu.
 
 const AREAS = [
+  { to: "/leads", label: "Leads", permission: "records.view" },
   { to: "/records", label: "Records", permission: "records.view" },
   { to: "/settings", label: "Settings", permission: "settings.view" },
 ]

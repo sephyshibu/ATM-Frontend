@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react"
+import { FileSpreadsheet, Plus } from "lucide-react"
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
@@ -14,6 +14,7 @@ import type { BrandRow, Organisation, PersonRow, RecordOptions, TagRef } from "@
 
 import { LoadError, Loading } from "../settings/shared"
 import { BrandDialog } from "./brand-dialog"
+import { ImportWizard } from "./import-wizard"
 import { OrganisationDialog } from "./organisation-dialog"
 import { PersonActions } from "./person-actions"
 import { PersonDialog } from "./person-dialog"
@@ -48,6 +49,7 @@ export function BrandsList({ options }: { options?: RecordOptions }) {
   const { can } = useSession()
   const navigate = useNavigate()
   const [archived, setArchived] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [adding, setAdding] = useState(false)
   const rows = useApi<BrandRow[]>(`/records/brands${archived ? "?archived=true" : ""}`)
   const data = rows.data ?? []
@@ -76,6 +78,11 @@ export function BrandsList({ options }: { options?: RecordOptions }) {
     <div className="flex flex-col gap-3">
       <ListToolbar toolbar={toolbar}>
         <ArchivedSwitch on={archived} set={setArchived} />
+        {can("kb.import") && (
+          <Button size="sm" variant="outline" onClick={() => setImporting(true)}>
+            <FileSpreadsheet /> Import
+          </Button>
+        )}
         {can("records.edit") && (
           <Button size="sm" onClick={() => setAdding(true)}>
             <Plus /> Add brand
@@ -122,6 +129,7 @@ export function BrandsList({ options }: { options?: RecordOptions }) {
           ))}
         </Table>
       )}
+      <ImportWizard open={importing} kind="brands" onClose={() => setImporting(false)} onImported={() => void rows.reload()} />
       <BrandDialog open={adding} options={options} onClose={() => setAdding(false)} onSaved={(b) => navigate(`/records/brands/${b.id}`)} />
     </div>
   )

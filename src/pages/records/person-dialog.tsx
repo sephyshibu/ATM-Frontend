@@ -13,6 +13,7 @@ import { countryName, personName } from "@/lib/records"
 import type { Organisation, OrganisationDetail, Person, PersonRow, RecordOptions } from "@/lib/types"
 
 import { attempt, useBusy } from "../settings/shared"
+import { CustomFieldInputs, customPayload, fieldsFor, missingRequired } from "./custom-fields"
 
 // Add or edit a person. A person belongs to one organisation and can work on several of its brands. An email belongs
 // to one active person, so the same contact isn't added twice.
@@ -44,17 +45,20 @@ function PersonForm({ person, organisationId, brandId, options, onClose, onSaved
   const [brandIds, setBrandIds] = useState<string[]>(brandId ? [brandId] : [])
   const [tried, setTried] = useState(false)
   const [busy, run] = useBusy()
+  const [custom, setCustom] = useState<Record<string, unknown>>(person?.custom ?? {})
 
   const countries = useMemo(() => (options?.countries ?? []).map((c) => ({ value: c, label: countryName(c), hint: c })).sort((a, b) => a.label.localeCompare(b.label)), [options])
   const pick = (list: keyof RecordOptions["lists"], keep?: string | null) => (options?.lists[list] ?? []).filter((o) => !o.retired || o.code === keep).map((o) => ({ value: o.code, label: o.label }))
   const activeBrands = (org.data?.brands ?? []).filter((b) => !b.archivedAt)
 
-  const error = !firstName.trim() ? "Add a first name." : !orgId ? "Pick the organisation they work for." : email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()) ? "Enter a valid email address." : undefined
+  const customFields = fieldsFor(options, "person", person?.custom)
+  const customMissing = missingRequired(customFields, custom)
+  const error = !firstName.trim() ? "Add a first name." : !orgId ? "Pick the organisation they work for." : customMissing ? `${customMissing.label} is required.` : email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()) ? "Enter a valid email address." : undefined
 
   const save = async () => {
     setTried(true)
     if (error) return
-    const fields = { firstName: firstName.trim(), lastName: lastName.trim(), jobTitle: jobTitle.trim(), email, emailStatus, phone, linkedinUrl, country, buyingRoleCode, consentCode, notes }
+    const fields = { firstName: firstName.trim(), lastName: lastName.trim(), jobTitle: jobTitle.trim(), email, emailStatus, phone, linkedinUrl, country, buyingRoleCode, consentCode, notes, custom: customPayload(customFields, custom) }
     const r = await run(() =>
       attempt(
         () => (person ? api.patch<PersonRow>(`/records/people/${person.id}`, fields) : api.post<PersonRow>("/records/people", { ...fields, organisationId: orgId, brandIds })),
@@ -126,6 +130,7 @@ function PersonForm({ person, organisationId, brandId, options, onClose, onSaved
           <Field label="Consent to contact">
             <SearchPick options={pick("consent_basis", person?.consentCode)} value={consentCode} onChange={setConsent} aria-label="Consent to contact" />
           </Field>
+          <CustomFieldInputs fields={customFields} values={custom} onChange={setCustom} tried={tried} />
           <Field label="Notes" className="col-span-2">
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-14 text-foreground" />
           </Field>

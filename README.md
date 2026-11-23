@@ -39,7 +39,9 @@ src/lib/session.tsx       the signed-in person and can("permission")
 src/lib/google.ts         the Sign in with Google address
 src/pages/login.tsx       sign-in
 src/pages/invite.tsx      the invite link's page
-src/pages/records/        organisations, brands, products, people, tags: lists, record pages, forms
+src/pages/records/        organisations, brands, products, people, tags: lists, record pages, forms, import wizard
+src/pages/leads/          the Leads list (bulk Target moves) and the lead card on a brand's page
+src/lib/excel.ts          reads .xlsx and .csv in the browser (read-excel-file)
 src/pages/settings/       users, roles, config, lists, change-log
 src/components/ui/        the shadcn kit (from the prototype)
 src/components/common/    chips, menus, toolbar, toasts (from the prototype)

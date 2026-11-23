@@ -19,6 +19,7 @@ import { OrganisationDialog } from "./organisation-dialog"
 import { PersonActions } from "./person-actions"
 import { PersonDialog } from "./person-dialog"
 import { ArchivePanel, Card, EmailStatus, HistoryList, Row } from "./shared"
+import { CustomFieldRows, fieldsFor, showValue } from "./custom-fields"
 import { TagChips } from "./tags"
 
 // One organisation (the legal entity ATM signs with): its details and tags, its brands, everyone who works there,
@@ -44,6 +45,7 @@ export function OrganisationPage() {
 
   const c = org.data
   const o = options.data
+  const personFields = fieldsFor(o, "person")
   const refresh = () => {
     void org.reload()
     void people.reload()
@@ -177,6 +179,7 @@ export function OrganisationPage() {
                   )}
                 </Row>
                 <Row label="Notes">{c.notes && <span className="whitespace-pre-wrap">{c.notes}</span>}</Row>
+                <CustomFieldRows fields={fieldsFor(o, "organisation", c.custom)} values={c.custom} />
                 <Row label="Added">{dateLabel(c.createdAt)}</Row>
               </dl>
             </Card>
@@ -254,6 +257,15 @@ export function OrganisationPage() {
                       <span className="truncate text-xs text-muted-foreground">
                         {[p.jobTitle, p.brands.filter((b) => !b.archivedAt).map((b) => b.name + (b.isPrimary ? " (main contact)" : "")).join(", ")].filter(Boolean).join(" · ")}
                       </span>
+                      {personFields.some((f) => showValue(p.custom?.[f.key])) && (
+                        <span className="truncate text-xs text-muted-foreground">
+                          {personFields
+                            .filter((f) => showValue(p.custom?.[f.key]))
+                            .slice(0, 4)
+                            .map((f) => `${f.label}: ${showValue(p.custom?.[f.key])}`)
+                            .join(" · ")}
+                        </span>
+                      )}
                       {p.email && (
                         <span className="flex items-center gap-1 text-xs">
                           {p.email} <EmailStatus status={p.emailStatus} />

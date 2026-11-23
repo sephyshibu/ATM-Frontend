@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { SessionProvider } from "@/lib/session"
 import { initThemeMode } from "@/lib/theme"
 import { InvitePage } from "@/pages/invite"
+import { LeadsPage } from "@/pages/leads"
 import { LoginPage } from "@/pages/login"
 import { NoAccessPage } from "@/pages/no-access"
 import { RecordsPage } from "@/pages/records"
@@ -25,6 +26,7 @@ const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { path: "/", element: <Home /> },
+      { path: "/leads", element: <LeadsPage /> },
       { path: "/records", element: <RecordsPage /> },
       { path: "/records/brands/:id", element: <BrandPage /> },
       { path: "/records/organisations/:id", element: <OrganisationPage /> },
