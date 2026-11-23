@@ -1,0 +1,1335 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter";
+
+/* Dark mode follows the `dark` class on <html> (src/lib/theme.ts). "Paper"
+   surfaces (the quotation sheet, PDF previews) stay light inside it. */
+@custom-variant dark (&:is(.dark *):not(:is(.paper, .paper *)));
+/* Responsive mode only (pages that work on phones, see components/admin/mobile):
+   compact = below lg (phones and tablets), phone = below sm. Desktop-only pages never match. */
+@custom-variant compact {
+  @media (width < 64rem) {
+    :where(html.responsive) & {
+      @slot;
+    }
+  }
+}
+@custom-variant phone {
+  @media (width < 40rem) {
+    :where(html.responsive) & {
+      @slot;
+    }
+  }
+}
+
+/* Type scale — 13px base, 12px secondary; 14/16 only where hierarchy
+   needs it. Overrides Tailwind's defaults so every shadcn component
+   (which uses text-sm / text-xs) lands on the product scale. */
+@theme {
+    --text-xs: 12px;
+    --text-xs--line-height: 1.4;
+    --text-sm: 13px;
+    --text-sm--line-height: 1.45;
+    --text-base: 14px;
+    --text-base--line-height: 1.5;
+    --text-lg: 16px;
+    --text-lg--line-height: 1.4;
+
+    /* Brand scale — royal blue (the default theme colour; Settings can change
+       it, see applyTheme). Primary is 500. Use 700+ for brand-tinted text. */
+    --color-brand-50: #f2f5ff;
+    --color-brand-100: #e2e8ff;
+    --color-brand-200: #c0ceff;
+    --color-brand-300: #96adff;
+    --color-brand-400: #6284ff;
+    --color-brand-500: #2e5bff;
+    --color-brand-600: #294fdb;
+    --color-brand-700: #2342b1;
+    --color-brand-800: #1f3792;
+    --color-brand-900: #1b3079;
+    --color-brand-950: #162250;
+}
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Inter Variable', sans-serif;
+    --color-page: var(--page);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Palette: Protrans greys + royal blue primary (white text on blue). */
+:root {
+    --page: #f7f7f7;
+    --background: #ffffff;
+    --foreground: #101828;
+    --card: #ffffff;
+    --card-foreground: #101828;
+    --popover: #ffffff;
+    --popover-foreground: #101828;
+    --primary: #2e5bff;
+    --primary-foreground: #ffffff;
+    --secondary: #f2f4f7;
+    --secondary-foreground: #101828;
+    --muted: #f2f4f7;
+    --muted-foreground: #667085;
+    --accent: #f2f5ff;
+    --accent-foreground: #1f3792;
+    --destructive: #d92d20;
+    --border: #eaecf0;
+    --input: #d0d5dd;
+    --ring: #2e5bff;
+    --chart-1: #294fdb;
+    --chart-2: #2e5bff;
+    --chart-3: #96adff;
+    --chart-4: #c0ceff;
+    --chart-5: #e2e8ff;
+    /* Insights charts (components/charts, docs/modules/insights.md): the validated categorical order (blue, orange, aqua,
+       yellow, magenta; never cycled), a one-hue ramp for magnitude (the heatmap, little to much) and the good / bad marks. */
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --series-4: #eda100;
+    --series-5: #e87ba4;
+    --seq-1: #cde2fb;
+    --seq-2: #86b6ef;
+    --seq-3: #5598e7;
+    --seq-4: #2a78d6;
+    --seq-5: #1c5cab;
+    --good: #0ca30c;
+    --bad: #d03b3b;
+    --radius: 0.375rem;
+    /* The admin header's height (56px + its line): what sticks sits under it (MobileSearch, the settings tabs). */
+    --app-header-h: 57px;
+    /* Where a long table's column header sticks (components/common/sticky-head): under the app header while the
+       window scrolls; a pane that scrolls itself sets 0 (STICKY_PANE). */
+    --sticky-top: var(--app-header-h);
+    --sidebar: #ffffff;
+    --sidebar-foreground: #101828;
+    --sidebar-primary: #2e5bff;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #f2f5ff;
+    --sidebar-accent-foreground: #1f3792;
+    --sidebar-border: #eaecf0;
+    --sidebar-ring: #2e5bff;
+    --scrollbar: #eaecf0;
+    --scrollbar-hover: #d0d5dd;
+    --chat-wallpaper: #f5f2ec;
+    /* The warehouse (pages/admin/warehouse: the 3D scene reads these at start, the map uses them as is): soft greys, occupancy in quiet blues, amber for a found item. */
+    --wh-ground: #e7e9ed;
+    --wh-floor: #f5f6f8;
+    --wh-zone: #eceef2;
+    --wh-line: #d0d5dd;
+    --wh-wall: #dfe2e7;
+    --wh-steel: #9aa3b4;
+    --wh-beam: #6b7487;
+    --wh-shade: #dcdfe5;
+    --wh-empty: #e9ebef;
+    --wh-some: #b7c3dc;
+    --wh-full: #7b8fbf;
+    --wh-highlight: #f79009;
+    /* Capacity bars in the warehouse panels: the track, then the fill (calm), above 85% (amber) and full (red). */
+    --wh-cap-track: #e4e7ec;
+    --wh-cap: #6f86c9;
+    --wh-cap-high: #dc6803;
+    --wh-cap-full: #d92d20;
+}
+
+/* Dark: shadcn's token structure, tuned for comfort — no pure black or
+   white. Page #131315, cards a gentle step up (#1b1b1e), muted surfaces
+   #242428, hairline borders at 9% white, text #e6e6e9 / #9a9aa2. The blue
+   primary is toned down a touch; accent is a deep blue tint. A custom primary from Settings overrides these (applyTheme). */
+.dark {
+    color-scheme: dark;
+    --page: #0f0f11;
+    --background: #0f0f11;
+    --foreground: #e6e6e9;
+    --card: #1c1c20;
+    --card-foreground: #e6e6e9;
+    --popover: #2b2b32;
+    --popover-foreground: #e6e6e9;
+    --primary: #2c57f1;
+    --primary-foreground: #ffffff;
+    --secondary: #25252b;
+    --secondary-foreground: #e6e6e9;
+    --muted: #25252b;
+    --muted-foreground: #9a9aa2;
+    --accent: #28345f;
+    --accent-foreground: #9db1f9;
+    --destructive: #f08a86;
+    --border: #ffffff0f;
+    --input: #ffffff21;
+    --ring: #6b88f6;
+    --chart-1: #7893f6;
+    --chart-2: #5f7ff4;
+    --chart-3: #4a67cf;
+    --chart-4: #3a52a3;
+    --chart-5: #2d4080;
+    /* Insights charts: the same hues stepped for the dark surface; the ramp runs dark (little) to light (much). */
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --seq-1: #26446d;
+    --seq-2: #1d5ca8;
+    --seq-3: #256abf;
+    --seq-4: #3987e5;
+    --seq-5: #86b6ef;
+    --good: #0ca30c;
+    --bad: #e66767;
+    --sidebar: #0d0d0f;
+    --sidebar-foreground: #e6e6e9;
+    --sidebar-primary: #2c57f1;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #28345f;
+    --sidebar-accent-foreground: #9db1f9;
+    --sidebar-border: #ffffff0f;
+    --sidebar-ring: #6b88f6;
+    --scrollbar: #ffffff2e;
+    --scrollbar-hover: #ffffff4d;
+    --chat-wallpaper: #17171a;
+    /* The warehouse (3D and map) in dark: the same roles, a notch apart on the dark page. */
+    --wh-ground: #17171a;
+    --wh-floor: #222226;
+    --wh-zone: #26272c;
+    --wh-line: #3a3b42;
+    --wh-wall: #2d2e34;
+    --wh-steel: #5c6170;
+    --wh-beam: #7b8191;
+    --wh-shade: #1c1c20;
+    --wh-empty: #34353c;
+    --wh-some: #3d4d78;
+    --wh-full: #5d75b8;
+    --wh-highlight: #f5a524;
+    --wh-cap-track: #2f3036;
+    --wh-cap: #6d84cc;
+    --wh-cap-high: #f0a23b;
+    --wh-cap-full: #f97066;
+
+    /* Brand scale turned around: 50–200 are deep tints for backgrounds,
+       600+ light shades for text. */
+    --color-brand-50: #161d34;
+    --color-brand-100: #19234a;
+    --color-brand-200: #1d2e6d;
+    --color-brand-300: #223c99;
+    --color-brand-400: #2749c5;
+    --color-brand-500: #2c57f1;
+    --color-brand-600: #456bf3;
+    --color-brand-700: #5f7ff4;
+    --color-brand-800: #7893f6;
+    --color-brand-900: #96abf8;
+    --color-brand-950: #b7c6fa;
+}
+
+/* Dark containers read as filled panels: no ring or border around a card, popover or muted panel (a border-<colour> class still wins),
+   and the ring on popovers and menus is a whisper; table and list dividers keep the quiet --border. */
+:where(.dark) :is(.bg-card, .bg-popover, .bg-muted).border:where(:not([class*="border-"], .paper, .paper *)) {
+    border-color: transparent;
+}
+:where(.dark) .ring-foreground/10:where(:not(.paper, .paper *)) {
+    --tw-ring-color: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+
+/* Dark text: the primary blue is too dim as text on muted / popover surfaces, so text-primary takes a lighter step of the brand scale; the dimmed
+   muted-foreground steps (/60, /70) would fall under 3:1, so they are held at /85. */
+:where(.dark) .text-primary:where(:not(.paper, .paper *)) {
+    color: var(--color-brand-800);
+}
+:where(.dark) :is(.text-muted-foreground/60, .text-muted-foreground/70):where(:not(.paper, .paper *)) {
+    color: color-mix(in srgb, var(--muted-foreground) 85%, transparent);
+}
+
+/* Dark shadows: black glows read as smudges on dark surfaces, so the small
+   elevation shadows go (borders carry the edge) and overlays get a softer,
+   slightly lifted scrim instead of the light theme's. */
+.dark .shadow-xs,
+.dark .shadow-sm {
+    --tw-shadow-color: transparent;
+}
+.dark :is([data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"], [data-slot="sheet-overlay"], [data-slot="drawer-overlay"]) {
+    background-color: rgb(8 8 10 / 0.35);
+}
+
+/* Paper (quotation sheet, PDF previews): always the light palette, like
+   the printed page, even in dark mode. */
+.paper {
+    color-scheme: light;
+    --page: #f7f7f7;
+    --background: #ffffff;
+    --foreground: #101828;
+    --card: #ffffff;
+    --card-foreground: #101828;
+    --popover: #ffffff;
+    --popover-foreground: #101828;
+    --primary-foreground: #ffffff;
+    --secondary: #f2f4f7;
+    --secondary-foreground: #101828;
+    --muted: #f2f4f7;
+    --muted-foreground: #667085;
+    --accent: #f2f5ff;
+    --accent-foreground: #1f3792;
+    --destructive: #d92d20;
+    --border: #eaecf0;
+    --input: #d0d5dd;
+    --color-brand-50: #f2f5ff;
+    --color-brand-100: #e2e8ff;
+    --color-brand-200: #c0ceff;
+    --color-brand-300: #96adff;
+    --color-brand-400: #6284ff;
+    --color-brand-500: #2e5bff;
+    --color-brand-600: #294fdb;
+    --color-brand-700: #2342b1;
+    --color-brand-800: #1f3792;
+    --color-brand-900: #1b3079;
+    --color-brand-950: #162250;
+    color: var(--foreground);
+}
+
+/* WhatsApp simulator palette — scoped to .wa so it never leaks into the app. */
+.wa {
+    --wa-bg: #efeae2;
+    --wa-header: #ffffff;
+    --wa-in: #ffffff;
+    --wa-out: #d9fdd3;
+    --wa-green: #008069;
+    --wa-accent: #25d366;
+    --wa-link: #027eb5;
+    --wa-meta: #667781;
+    --wa-text: #111b21;
+    --wa-chip: #ffeecd;
+    --wa-read: #53bdeb;
+    --wa-ios-bar: #f6f6f6;
+    --wa-ios-blue: #007aff;
+    --wa-bar: #f0f2f5;
+    --wa-icon: #54656f;
+    --wa-field: #ffffff;
+    --wa-chip-text: #54656f;
+}
+
+/* WhatsApp's own dark palette, for the admin's WhatsApp pane in dark mode
+   (the WhatsApp simulator itself always stays light). */
+.dark .wa {
+    --wa-bg: #0b141a;
+    --wa-header: #202c33;
+    --wa-in: #202c33;
+    --wa-out: #005c4b;
+    --wa-green: #00a884;
+    --wa-meta: #8696a0;
+    --wa-text: #e9edef;
+    --wa-chip: #182229;
+    --wa-chip-text: #ffd279;
+    --wa-bar: #202c33;
+    --wa-icon: #aebac1;
+    --wa-field: #2a3942;
+}
+
+/* Chat wallpaper: beige with a faint doodle pattern, like WhatsApp's. */
+.wa-wallpaper {
+    background-color: var(--wa-bg);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120' fill='none' stroke='%23000' stroke-opacity='0.055' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='18' cy='20' r='7'/%3E%3Cpath d='M44 12l4 8 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z'/%3E%3Cpath d='M86 14h18a4 4 0 014 4v10a4 4 0 01-4 4H94l-6 5v-5h-2a4 4 0 01-4-4V18a4 4 0 014-4z'/%3E%3Cpath d='M14 60c6-8 14-8 20 0s14 8 20 0'/%3E%3Crect x='70' y='52' width='16' height='20' rx='3'/%3E%3Cpath d='M74 58h8M74 63h8M74 68h5'/%3E%3Cpath d='M100 58l8 8m0-8l-8 8'/%3E%3Ccircle cx='24' cy='98' r='3'/%3E%3Cpath d='M44 90v16m-8-8h16'/%3E%3Cpath d='M70 104l8-14 8 14z'/%3E%3Cpath d='M98 94a6 6 0 0112 0c0 6-6 10-6 10s-6-4-6-10z'/%3E%3C/svg%3E");
+    background-size: 120px 120px;
+}
+
+.dark .wa-wallpaper {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120' fill='none' stroke='%23fff' stroke-opacity='0.035' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='18' cy='20' r='7'/%3E%3Cpath d='M44 12l4 8 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z'/%3E%3Cpath d='M86 14h18a4 4 0 014 4v10a4 4 0 01-4 4H94l-6 5v-5h-2a4 4 0 01-4-4V18a4 4 0 014-4z'/%3E%3Cpath d='M14 60c6-8 14-8 20 0s14 8 20 0'/%3E%3Crect x='70' y='52' width='16' height='20' rx='3'/%3E%3Cpath d='M74 58h8M74 63h8M74 68h5'/%3E%3Cpath d='M100 58l8 8m0-8l-8 8'/%3E%3Ccircle cx='24' cy='98' r='3'/%3E%3Cpath d='M44 90v16m-8-8h16'/%3E%3Cpath d='M70 104l8-14 8 14z'/%3E%3Cpath d='M98 94a6 6 0 0112 0c0 6-6 10-6 10s-6-4-6-10z'/%3E%3C/svg%3E");
+}
+
+/* Thin, quiet scrollbars across the app (Protrans style). */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-hover) transparent;
+}
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-hover);
+}
+*::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* Scroll rows that opt out of the scrollbar ([scrollbar-width:none] utilities, e.g. tab rows) must win over the
+   unlayered rules above, or the thin bar still shows and covers the active tab's underline. */
+.no-scrollbar,
+[class*="[scrollbar-width:none]"] {
+    scrollbar-width: none;
+    scrollbar-gutter: auto;
+}
+.no-scrollbar::-webkit-scrollbar,
+[class*="[scrollbar-width:none]"]::-webkit-scrollbar {
+    display: none;
+}
+
+/* No layout jump when a scrollbar appears: scroll areas always reserve
+   the (thin) gutter. Phones hide scrollbars entirely, so no gutter there. */
+.overflow-y-auto,
+.overflow-auto {
+    scrollbar-gutter: stable;
+}
+
+/* …except floating menus: a reserved gutter there reads as uneven
+   right-hand padding, and they rarely scroll. */
+[data-slot="select-content"],
+[data-slot="select-content"] *,
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-sub-content"],
+[data-slot="popover-content"],
+[data-slot="popover-content"] * {
+    scrollbar-gutter: auto;
+}
+
+/* Radix locks page scroll while menus/popovers are open and pads <body> to
+   make up for the vanished scrollbar. <html> already reserves that space
+   (scrollbar-gutter), so the extra padding would shove the page sideways. */
+html body[data-scroll-locked] {
+    margin-right: 0 !important;
+    padding-right: 0 !important;
+    --removed-body-scroll-bar-size: 0px !important;
+}
+
+/* Chat background: warm neutral with a faint doodle pattern (WhatsApp-like). */
+.chat-wallpaper {
+    background-color: var(--chat-wallpaper);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120' fill='none' stroke='%23000' stroke-opacity='0.045' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='18' cy='20' r='7'/%3E%3Cpath d='M44 12l4 8 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z'/%3E%3Cpath d='M86 14h18a4 4 0 014 4v10a4 4 0 01-4 4H94l-6 5v-5h-2a4 4 0 01-4-4V18a4 4 0 014-4z'/%3E%3Cpath d='M14 60c6-8 14-8 20 0s14 8 20 0'/%3E%3Crect x='70' y='52' width='16' height='20' rx='3'/%3E%3Cpath d='M74 58h8M74 63h8M74 68h5'/%3E%3Cpath d='M100 58l8 8m0-8l-8 8'/%3E%3Ccircle cx='24' cy='98' r='3'/%3E%3Cpath d='M44 90v16m-8-8h16'/%3E%3Cpath d='M70 104l8-14 8 14z'/%3E%3Cpath d='M98 94a6 6 0 0112 0c0 6-6 10-6 10s-6-4-6-10z'/%3E%3C/svg%3E");
+    background-size: 120px 120px;
+}
+
+.dark .chat-wallpaper {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120' fill='none' stroke='%23fff' stroke-opacity='0.04' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='18' cy='20' r='7'/%3E%3Cpath d='M44 12l4 8 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z'/%3E%3Cpath d='M86 14h18a4 4 0 014 4v10a4 4 0 01-4 4H94l-6 5v-5h-2a4 4 0 01-4-4V18a4 4 0 014-4z'/%3E%3Cpath d='M14 60c6-8 14-8 20 0s14 8 20 0'/%3E%3Crect x='70' y='52' width='16' height='20' rx='3'/%3E%3Cpath d='M74 58h8M74 63h8M74 68h5'/%3E%3Cpath d='M100 58l8 8m0-8l-8 8'/%3E%3Ccircle cx='24' cy='98' r='3'/%3E%3Cpath d='M44 90v16m-8-8h16'/%3E%3Cpath d='M70 104l8-14 8 14z'/%3E%3Cpath d='M98 94a6 6 0 0112 0c0 6-6 10-6 10s-6-4-6-10z'/%3E%3C/svg%3E");
+}
+
+/* Phones scroll without visible scrollbars, like the real thing. */
+.phone-screen,
+.phone-screen * {
+    scrollbar-width: none;
+}
+.phone-screen ::-webkit-scrollbar {
+    display: none;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    scrollbar-gutter: stable;
+  }
+  body {
+    @apply bg-page text-sm text-foreground antialiased;
+    min-width: 1024px;
+  }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* Rich text (quotation terms): editor and read-only view share these. */
+.rich-text p { margin: 0 0 0.5rem; }
+.rich-text p:last-child { margin-bottom: 0; }
+.rich-text b, .rich-text strong { font-weight: 600; }
+.rich-text ul, .rich-text ol { margin: 0 0 0.5rem; padding-left: 1.25rem; }
+.rich-text ul { list-style: disc; }
+.rich-text ol { list-style: decimal; }
+.rich-text li { margin: 0.125rem 0; }
+.rich-text li::marker { color: var(--muted-foreground); }
+.rich-text a { color: var(--color-brand-700); text-decoration: underline; text-underline-offset: 2px; word-break: break-all; }
+.rich-text[contenteditable]:empty::before { content: attr(data-placeholder); color: var(--muted-foreground); }
+
+/* Dragging a window's edge (components/common/resizable-width.tsx): its cursor everywhere (the two-way one, or at the
+   smallest or largest width only the way still open), no text selection. */
+body.resizing-width,
+body.resizing-width * {
+    cursor: var(--resize-cursor, col-resize) !important;
+    user-select: none !important;
+}
+
+/* Scope of work / Quotations large view: rises up from below with a soft
+   settle; sinks back down on close. */
+/* The dialog is centred with the `translate` property (Tailwind v4), so these
+   keyframes only move it relative to that — no -50% here, or it jumps at the
+   end. Transform and opacity only, no overshoot: smooth on the compositor. */
+.expand-modal[data-state="open"] {
+    animation: expand-in 380ms cubic-bezier(0.16, 1, 0.3, 1);
+    transform-origin: 50% 100%;
+    will-change: transform, opacity;
+}
+.expand-modal[data-state="closed"] {
+    animation: expand-out 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+    transform-origin: 50% 100%;
+    will-change: transform, opacity;
+}
+@keyframes expand-in {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes expand-out {
+    from { opacity: 1; transform: none; }
+    to { opacity: 0; transform: translateY(16px) scale(0.98); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .expand-modal[data-state] { animation-duration: 1ms; }
+}
+
+/* Modal motion (opacity + transform only). Dialogs and alert dialogs: the
+   overlay fades (150ms); the content scales 0.96 to 1 with a 6px rise, 180ms
+   ease-out in, 140ms ease-in out. The large Scope / Quotations view keeps its
+   own grow-out above. Sheets, popovers, menus, selects, hover cards and
+   tooltips use the tw-animate-css classes on their components in ui/. */
+:is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]):not(.expand-modal)[data-state="open"] {
+    animation: modal-pop-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, opacity;
+}
+:is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]):not(.expand-modal)[data-state="closed"] {
+    animation: modal-pop-out 140ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+:is([data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"])[data-state="open"] {
+    animation: modal-fade-in 150ms ease-out;
+}
+:is([data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"])[data-state="closed"] {
+    animation: modal-fade-out 150ms ease-in forwards;
+}
+@keyframes modal-pop-in {
+    from { opacity: 0; transform: translateY(6px) scale(0.96); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes modal-pop-out {
+    from { opacity: 1; transform: none; }
+    to { opacity: 0; transform: translateY(4px) scale(0.96); }
+}
+@keyframes modal-fade-in {
+    from { opacity: 0; }
+}
+@keyframes modal-fade-out {
+    to { opacity: 0; }
+}
+
+/* A full-screen layer that stays mounted (state kept) but fades and rises in
+   and out: set data-open on it instead of toggling `hidden`. */
+.fx-layer {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity 140ms ease-in, transform 140ms ease-in, visibility 0s linear 140ms;
+}
+.fx-layer[data-open] {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+    transition: opacity 200ms ease-out, transform 200ms ease-out, visibility 0s;
+}
+
+/* Reduced motion: overlays still mount and unmount cleanly (Radix waits for
+   the animation end), they just don't move. */
+@media (prefers-reduced-motion: reduce) {
+    :is([data-slot$="-content"], [data-slot$="-overlay"], [data-radix-popper-content-wrapper] > *)[data-state] {
+        animation-duration: 1ms !important;
+        transition-duration: 1ms !important;
+    }
+    .fx-layer, .fx-layer[data-open] { transition-duration: 1ms; transform: none; }
+}
+
+/* Dark mode for hard-coded colours. Status chips, cards, dots and action
+   items use Untitled UI hexes as arbitrary classes (bg-[#ecfdf3]
+   text-[#067647]…). In dark, pastel fills become low-alpha tints of the same
+   hue, pastel borders a faint hue line, deep text a light shade and grey
+   neutrals the theme tokens — so every module follows without per-file
+   dark: variants. Zero-specificity :where() keeps explicit dark: classes in
+   charge; paper surfaces keep the light look.
+   Generated from the classes in src by `node scripts/dark-colors.mjs --write`
+   (the palette lives there) — don't edit by hand. */
+@layer utilities {
+/* @dark-remap:start */
+:where(.dark) {
+    --dk-text-007aff: #98c4ee;
+    --dk-text-026aa2: #98c4ee;
+    --dk-text-027a48: #8fd3ab;
+    --dk-text-05603a: #8fd3ab;
+    --dk-text-067647: #8fd3ab;
+    --dk-text-06aed4: #82d3c4;
+    --dk-text-079455: #8fd3ab;
+    --dk-text-0a84ff: #98c4ee;
+    --dk-text-0b57d0: #98c4ee;
+    --dk-text-0ba5ec: #98c4ee;
+    --dk-text-0e7090: #82d3c4;
+    --dk-text-0e9384: #82d3c4;
+    --dk-text-0e9f5c: #8fd3ab;
+    --dk-text-101828: var(--foreground);
+    --dk-border-101828: var(--foreground);
+    --dk-text-107569: #82d3c4;
+    --dk-text-12b76a: #8fd3ab;
+    --dk-text-1570ef: #98c4ee;
+    --dk-text-15b79e: #82d3c4;
+    --dk-text-175cd3: #98c4ee;
+    --dk-text-17b26a: #8fd3ab;
+    --dk-text-1d2939: var(--foreground);
+    --dk-text-1fb957: #8fd3ab;
+    --dk-text-25d366: #8fd3ab;
+    --dk-text-2e90fa: #98c4ee;
+    --dk-text-344054: var(--foreground);
+    --dk-text-3538cd: #adb9ee;
+    --dk-text-363f72: #b6b9d2;
+    --dk-text-3b7c0f: #aed68a;
+    --dk-text-444ce7: #adb9ee;
+    --dk-text-475467: var(--muted-foreground);
+    --dk-text-47cd89: #8fd3ab;
+    --dk-text-53bdeb: #98c4ee;
+    --dk-text-5925dc: #bbb4ee;
+    --dk-text-667085: var(--muted-foreground);
+    --dk-border-667085: var(--border);
+    --dk-text-6938ef: #bbb4ee;
+    --dk-text-6941c6: #bbb4ee;
+    --dk-text-7a5af8: #bbb4ee;
+    --dk-text-84adff: #98c4ee;
+    --dk-text-93370d: #eec777;
+    --dk-text-98a2b3: var(--muted-foreground);
+    --dk-bg-99f6e0: rgb(21 183 158 / 0.25);
+    --dk-border-99f6e0: rgb(21 183 158 / 0.12);
+    --dk-bg-abefc6: rgb(23 178 106 / 0.25);
+    --dk-border-abefc6: rgb(23 178 106 / 0.12);
+    --dk-text-b42318: #efa59f;
+    --dk-text-b54708: #eec777;
+    --dk-text-b93815: #ecb48e;
+    --dk-bg-b9e6fe: rgb(46 144 250 / 0.25);
+    --dk-border-b9e6fe: rgb(46 144 250 / 0.12);
+    --dk-text-c01048: #efa8b6;
+    --dk-text-c11574: #ebafd8;
+    --dk-bg-ccf2e8: rgb(21 183 158 / 0.25);
+    --dk-border-ccf2e8: rgb(21 183 158 / 0.12);
+    --dk-bg-d0d5dd: #525252;
+    --dk-border-d0d5dd: var(--input);
+    --dk-bg-d1e9ff: rgb(46 144 250 / 0.2);
+    --dk-border-d1e9ff: rgb(46 144 250 / 0.12);
+    --dk-bg-d1fadf: rgb(23 178 106 / 0.2);
+    --dk-border-d1fadf: rgb(23 178 106 / 0.12);
+    --dk-bg-d3f3df: rgb(23 178 106 / 0.25);
+    --dk-border-d3f3df: rgb(23 178 106 / 0.12);
+    --dk-bg-d5d9eb: rgb(78 91 166 / 0.25);
+    --dk-border-d5d9eb: rgb(78 91 166 / 0.12);
+    --dk-bg-d5ecfb: rgb(46 144 250 / 0.25);
+    --dk-border-d5ecfb: rgb(46 144 250 / 0.12);
+    --dk-text-d92d20: #efa59f;
+    --dk-bg-d9d6fe: rgb(122 90 248 / 0.25);
+    --dk-border-d9d6fe: rgb(122 90 248 / 0.12);
+    --dk-text-dc9b04: #eec777;
+    --dk-bg-dcfae6: rgb(23 178 106 / 0.2);
+    --dk-border-dcfae6: rgb(23 178 106 / 0.12);
+    --dk-text-dd2590: #ebafd8;
+    --dk-text-e04f16: #ecb48e;
+    --dk-bg-e0eaff: rgb(97 114 243 / 0.2);
+    --dk-border-e0eaff: rgb(97 114 243 / 0.12);
+    --dk-bg-e0f0ff: rgb(46 144 250 / 0.2);
+    --dk-border-e0f0ff: rgb(46 144 250 / 0.12);
+    --dk-bg-e3f4c8: rgb(102 198 28 / 0.25);
+    --dk-border-e3f4c8: rgb(102 198 28 / 0.12);
+    --dk-bg-e4dcff: rgb(122 90 248 / 0.25);
+    --dk-border-e4dcff: rgb(122 90 248 / 0.12);
+    --dk-bg-e4e0fe: rgb(122 90 248 / 0.25);
+    --dk-border-e4e0fe: rgb(122 90 248 / 0.12);
+    --dk-bg-e9e3ff: rgb(122 90 248 / 0.25);
+    --dk-border-e9e3ff: rgb(122 90 248 / 0.12);
+    --dk-bg-eaecf0: var(--muted);
+    --dk-border-eaecf0: var(--border);
+    --dk-bg-ebe9fe: rgb(122 90 248 / 0.22);
+    --dk-border-ebe9fe: rgb(122 90 248 / 0.12);
+    --dk-bg-ecfdf3: rgb(23 178 106 / 0.12);
+    --dk-border-ecfdf3: rgb(23 178 106 / 0.12);
+    --dk-bg-ecfdff: rgb(21 183 158 / 0.12);
+    --dk-border-ecfdff: rgb(21 183 158 / 0.12);
+    --dk-text-ee46bc: #ebafd8;
+    --dk-text-ef6820: #ecb48e;
+    --dk-bg-eff8ff: rgb(46 144 250 / 0.12);
+    --dk-border-eff8ff: rgb(46 144 250 / 0.12);
+    --dk-bg-effbf3: rgb(23 178 106 / 0.12);
+    --dk-border-effbf3: rgb(23 178 106 / 0.12);
+    --dk-text-f04438: #efa59f;
+    --dk-bg-f0f8fe: rgb(46 144 250 / 0.12);
+    --dk-border-f0f8fe: rgb(46 144 250 / 0.12);
+    --dk-bg-f0f8ff: rgb(46 144 250 / 0.12);
+    --dk-border-f0f8ff: rgb(46 144 250 / 0.12);
+    --dk-bg-f0f9ff: rgb(46 144 250 / 0.12);
+    --dk-border-f0f9ff: rgb(46 144 250 / 0.12);
+    --dk-bg-f0fdf9: rgb(21 183 158 / 0.12);
+    --dk-border-f0fdf9: rgb(21 183 158 / 0.12);
+    --dk-bg-f1d65c: rgb(247 144 9 / 0.25);
+    --dk-border-f1d65c: rgb(247 144 9 / 0.12);
+    --dk-bg-f2f2f2: var(--muted);
+    --dk-text-f38744: #ecb48e;
+    --dk-bg-f4f3ff: rgb(122 90 248 / 0.14);
+    --dk-border-f4f3ff: rgb(122 90 248 / 0.12);
+    --dk-bg-f5faff: rgb(46 144 250 / 0.1);
+    --dk-border-f5faff: rgb(46 144 250 / 0.12);
+    --dk-bg-f5fbee: rgb(102 198 28 / 0.12);
+    --dk-border-f5fbee: rgb(102 198 28 / 0.12);
+    --dk-bg-f6f3ff: rgb(122 90 248 / 0.12);
+    --dk-border-f6f3ff: rgb(122 90 248 / 0.12);
+    --dk-bg-f6fef9: rgb(23 178 106 / 0.1);
+    --dk-border-f6fef9: rgb(23 178 106 / 0.12);
+    --dk-bg-f6fefc: rgb(21 183 158 / 0.1);
+    --dk-border-f6fefc: rgb(21 183 158 / 0.12);
+    --dk-text-f79009: #eec777;
+    --dk-bg-f7f8fa: var(--muted);
+    --dk-bg-f8f9fc: rgb(78 91 166 / 0.14);
+    --dk-border-f8f9fc: rgb(78 91 166 / 0.12);
+    --dk-bg-f8fbff: rgb(46 144 250 / 0.08);
+    --dk-border-f8fbff: rgb(46 144 250 / 0.12);
+    --dk-bg-f9dbaf: rgb(239 104 32 / 0.25);
+    --dk-border-f9dbaf: rgb(239 104 32 / 0.12);
+    --dk-bg-fbe0ef: rgb(238 70 188 / 0.25);
+    --dk-border-fbe0ef: rgb(238 70 188 / 0.12);
+    --dk-bg-fcceee: rgb(238 70 188 / 0.25);
+    --dk-border-fcceee: rgb(238 70 188 / 0.12);
+    --dk-bg-fce7f6: rgb(238 70 188 / 0.2);
+    --dk-border-fce7f6: rgb(238 70 188 / 0.12);
+    --dk-bg-fda29b: rgb(240 68 56 / 0.25);
+    --dk-border-fda29b: rgb(240 68 56 / 0.12);
+    --dk-text-fdb022: #eec777;
+    --dk-bg-fde7c9: rgb(239 104 32 / 0.25);
+    --dk-border-fde7c9: rgb(239 104 32 / 0.12);
+    --dk-bg-fdf2f8: rgb(238 70 188 / 0.12);
+    --dk-border-fdf2f8: rgb(238 70 188 / 0.12);
+    --dk-bg-fdf2fa: rgb(238 70 188 / 0.12);
+    --dk-border-fdf2fa: rgb(238 70 188 / 0.12);
+    --dk-bg-fecdca: rgb(240 68 56 / 0.25);
+    --dk-border-fecdca: rgb(240 68 56 / 0.12);
+    --dk-bg-fecdd6: rgb(246 61 104 / 0.25);
+    --dk-border-fecdd6: rgb(246 61 104 / 0.12);
+    --dk-bg-fedf89: rgb(247 144 9 / 0.25);
+    --dk-border-fedf89: rgb(247 144 9 / 0.12);
+    --dk-bg-fee4e2: rgb(240 68 56 / 0.2);
+    --dk-border-fee4e2: rgb(240 68 56 / 0.12);
+    --dk-bg-fef0c7: rgb(247 144 9 / 0.2);
+    --dk-border-fef0c7: rgb(247 144 9 / 0.12);
+    --dk-bg-fef3f2: rgb(240 68 56 / 0.12);
+    --dk-border-fef3f2: rgb(240 68 56 / 0.12);
+    --dk-bg-fef6ee: rgb(239 104 32 / 0.12);
+    --dk-border-fef6ee: rgb(239 104 32 / 0.12);
+    --dk-bg-fef6fb: rgb(238 70 188 / 0.1);
+    --dk-border-fef6fb: rgb(238 70 188 / 0.12);
+    --dk-bg-fff1f3: rgb(246 61 104 / 0.12);
+    --dk-border-fff1f3: rgb(246 61 104 / 0.12);
+    --dk-bg-fff7ec: rgb(239 104 32 / 0.12);
+    --dk-border-fff7ec: rgb(239 104 32 / 0.12);
+    --dk-bg-fffaeb: rgb(247 144 9 / 0.12);
+    --dk-border-fffaeb: rgb(247 144 9 / 0.12);
+    --dk-bg-fffbe6: rgb(247 144 9 / 0.12);
+    --dk-border-fffbe6: rgb(247 144 9 / 0.12);
+    --dk-bg-fffbfa: rgb(240 68 56 / 0.1);
+    --dk-border-fffbfa: rgb(240 68 56 / 0.12);
+    --dk-bg-fffcf5: rgb(247 144 9 / 0.1);
+    --dk-border-fffcf5: rgb(247 144 9 / 0.12);
+}
+:where(.dark) .paper {
+    --dk-text-007aff: initial;
+    --dk-text-026aa2: initial;
+    --dk-text-027a48: initial;
+    --dk-text-05603a: initial;
+    --dk-text-067647: initial;
+    --dk-text-06aed4: initial;
+    --dk-text-079455: initial;
+    --dk-text-0a84ff: initial;
+    --dk-text-0b57d0: initial;
+    --dk-text-0ba5ec: initial;
+    --dk-text-0e7090: initial;
+    --dk-text-0e9384: initial;
+    --dk-text-0e9f5c: initial;
+    --dk-text-101828: initial;
+    --dk-border-101828: initial;
+    --dk-text-107569: initial;
+    --dk-text-12b76a: initial;
+    --dk-text-1570ef: initial;
+    --dk-text-15b79e: initial;
+    --dk-text-175cd3: initial;
+    --dk-text-17b26a: initial;
+    --dk-text-1d2939: initial;
+    --dk-text-1fb957: initial;
+    --dk-text-25d366: initial;
+    --dk-text-2e90fa: initial;
+    --dk-text-344054: initial;
+    --dk-text-3538cd: initial;
+    --dk-text-363f72: initial;
+    --dk-text-3b7c0f: initial;
+    --dk-text-444ce7: initial;
+    --dk-text-475467: initial;
+    --dk-text-47cd89: initial;
+    --dk-text-53bdeb: initial;
+    --dk-text-5925dc: initial;
+    --dk-text-667085: initial;
+    --dk-border-667085: initial;
+    --dk-text-6938ef: initial;
+    --dk-text-6941c6: initial;
+    --dk-text-7a5af8: initial;
+    --dk-text-84adff: initial;
+    --dk-text-93370d: initial;
+    --dk-text-98a2b3: initial;
+    --dk-bg-99f6e0: initial;
+    --dk-border-99f6e0: initial;
+    --dk-bg-abefc6: initial;
+    --dk-border-abefc6: initial;
+    --dk-text-b42318: initial;
+    --dk-text-b54708: initial;
+    --dk-text-b93815: initial;
+    --dk-bg-b9e6fe: initial;
+    --dk-border-b9e6fe: initial;
+    --dk-text-c01048: initial;
+    --dk-text-c11574: initial;
+    --dk-bg-ccf2e8: initial;
+    --dk-border-ccf2e8: initial;
+    --dk-bg-d0d5dd: initial;
+    --dk-border-d0d5dd: initial;
+    --dk-bg-d1e9ff: initial;
+    --dk-border-d1e9ff: initial;
+    --dk-bg-d1fadf: initial;
+    --dk-border-d1fadf: initial;
+    --dk-bg-d3f3df: initial;
+    --dk-border-d3f3df: initial;
+    --dk-bg-d5d9eb: initial;
+    --dk-border-d5d9eb: initial;
+    --dk-bg-d5ecfb: initial;
+    --dk-border-d5ecfb: initial;
+    --dk-text-d92d20: initial;
+    --dk-bg-d9d6fe: initial;
+    --dk-border-d9d6fe: initial;
+    --dk-text-dc9b04: initial;
+    --dk-bg-dcfae6: initial;
+    --dk-border-dcfae6: initial;
+    --dk-text-dd2590: initial;
+    --dk-text-e04f16: initial;
+    --dk-bg-e0eaff: initial;
+    --dk-border-e0eaff: initial;
+    --dk-bg-e0f0ff: initial;
+    --dk-border-e0f0ff: initial;
+    --dk-bg-e3f4c8: initial;
+    --dk-border-e3f4c8: initial;
+    --dk-bg-e4dcff: initial;
+    --dk-border-e4dcff: initial;
+    --dk-bg-e4e0fe: initial;
+    --dk-border-e4e0fe: initial;
+    --dk-bg-e9e3ff: initial;
+    --dk-border-e9e3ff: initial;
+    --dk-bg-eaecf0: initial;
+    --dk-border-eaecf0: initial;
+    --dk-bg-ebe9fe: initial;
+    --dk-border-ebe9fe: initial;
+    --dk-bg-ecfdf3: initial;
+    --dk-border-ecfdf3: initial;
+    --dk-bg-ecfdff: initial;
+    --dk-border-ecfdff: initial;
+    --dk-text-ee46bc: initial;
+    --dk-text-ef6820: initial;
+    --dk-bg-eff8ff: initial;
+    --dk-border-eff8ff: initial;
+    --dk-bg-effbf3: initial;
+    --dk-border-effbf3: initial;
+    --dk-text-f04438: initial;
+    --dk-bg-f0f8fe: initial;
+    --dk-border-f0f8fe: initial;
+    --dk-bg-f0f8ff: initial;
+    --dk-border-f0f8ff: initial;
+    --dk-bg-f0f9ff: initial;
+    --dk-border-f0f9ff: initial;
+    --dk-bg-f0fdf9: initial;
+    --dk-border-f0fdf9: initial;
+    --dk-bg-f1d65c: initial;
+    --dk-border-f1d65c: initial;
+    --dk-bg-f2f2f2: initial;
+    --dk-text-f38744: initial;
+    --dk-bg-f4f3ff: initial;
+    --dk-border-f4f3ff: initial;
+    --dk-bg-f5faff: initial;
+    --dk-border-f5faff: initial;
+    --dk-bg-f5fbee: initial;
+    --dk-border-f5fbee: initial;
+    --dk-bg-f6f3ff: initial;
+    --dk-border-f6f3ff: initial;
+    --dk-bg-f6fef9: initial;
+    --dk-border-f6fef9: initial;
+    --dk-bg-f6fefc: initial;
+    --dk-border-f6fefc: initial;
+    --dk-text-f79009: initial;
+    --dk-bg-f7f8fa: initial;
+    --dk-bg-f8f9fc: initial;
+    --dk-border-f8f9fc: initial;
+    --dk-bg-f8fbff: initial;
+    --dk-border-f8fbff: initial;
+    --dk-bg-f9dbaf: initial;
+    --dk-border-f9dbaf: initial;
+    --dk-bg-fbe0ef: initial;
+    --dk-border-fbe0ef: initial;
+    --dk-bg-fcceee: initial;
+    --dk-border-fcceee: initial;
+    --dk-bg-fce7f6: initial;
+    --dk-border-fce7f6: initial;
+    --dk-bg-fda29b: initial;
+    --dk-border-fda29b: initial;
+    --dk-text-fdb022: initial;
+    --dk-bg-fde7c9: initial;
+    --dk-border-fde7c9: initial;
+    --dk-bg-fdf2f8: initial;
+    --dk-border-fdf2f8: initial;
+    --dk-bg-fdf2fa: initial;
+    --dk-border-fdf2fa: initial;
+    --dk-bg-fecdca: initial;
+    --dk-border-fecdca: initial;
+    --dk-bg-fecdd6: initial;
+    --dk-border-fecdd6: initial;
+    --dk-bg-fedf89: initial;
+    --dk-border-fedf89: initial;
+    --dk-bg-fee4e2: initial;
+    --dk-border-fee4e2: initial;
+    --dk-bg-fef0c7: initial;
+    --dk-border-fef0c7: initial;
+    --dk-bg-fef3f2: initial;
+    --dk-border-fef3f2: initial;
+    --dk-bg-fef6ee: initial;
+    --dk-border-fef6ee: initial;
+    --dk-bg-fef6fb: initial;
+    --dk-border-fef6fb: initial;
+    --dk-bg-fff1f3: initial;
+    --dk-border-fff1f3: initial;
+    --dk-bg-fff7ec: initial;
+    --dk-border-fff7ec: initial;
+    --dk-bg-fffaeb: initial;
+    --dk-border-fffaeb: initial;
+    --dk-bg-fffbe6: initial;
+    --dk-border-fffbe6: initial;
+    --dk-bg-fffbfa: initial;
+    --dk-border-fffbfa: initial;
+    --dk-bg-fffcf5: initial;
+    --dk-border-fffcf5: initial;
+}
+:where(.dark) .bg-\[\#fef3f2\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(240 68 56 / 0.12);
+}
+:where(.dark) .hover\:text-\[\#b42318\]:hover:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#b42318\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#d92d20\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#f04438\]:where(:not(.paper, .paper *)) {
+    color: #efa59f;
+}
+:where(.dark) .bg-\[\#fef6ee\]:where(:not(.paper, .paper *)),
+:where(.dark) .bg-\[\#fff7ec\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(239 104 32 / 0.12);
+}
+:where(.dark) .text-\[\#b93815\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#e04f16\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#ef6820\]:where(:not(.paper, .paper *)) {
+    color: #ecb48e;
+}
+:where(.dark) .text-\[\#93370d\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#b54708\]:where(:not(.paper, .paper *)) {
+    color: #eec777;
+}
+:where(.dark) .bg-\[\#fdf2f8\]:where(:not(.paper, .paper *)),
+:where(.dark) .bg-\[\#fdf2fa\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(238 70 188 / 0.12);
+}
+:where(.dark) .text-\[\#c11574\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#dd2590\]:where(:not(.paper, .paper *)) {
+    color: #ebafd8;
+}
+:where(.dark) .bg-\[\#f6f3ff\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(122 90 248 / 0.12);
+}
+:where(.dark) .hover\:text-\[\#5925dc\]:hover:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#5925dc\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#6938ef\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#6941c6\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#7a5af8\]:where(:not(.paper, .paper *)) {
+    color: #bbb4ee;
+}
+:where(.dark) .bg-\[\#eff8ff\]:where(:not(.paper, .paper *)),
+:where(.dark) .bg-\[\#f0f8fe\]:where(:not(.paper, .paper *)),
+:where(.dark) .bg-\[\#f0f8ff\]:where(:not(.paper, .paper *)),
+:where(.dark) .bg-\[\#f0f9ff\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(46 144 250 / 0.12);
+}
+:where(.dark) .text-\[\#007aff\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#026aa2\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#0b57d0\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#1570ef\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#175cd3\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#53bdeb\]:where(:not(.paper, .paper *)) {
+    color: #98c4ee;
+}
+:where(.dark) .bg-\[\#ecfdff\]:where(:not(.paper, .paper *)),
+:where(.dark) .bg-\[\#f0fdf9\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(21 183 158 / 0.12);
+}
+:where(.dark) .text-\[\#0e7090\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#0e9384\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#107569\]:where(:not(.paper, .paper *)) {
+    color: #82d3c4;
+}
+:where(.dark) .bg-\[\#f5fbee\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(102 198 28 / 0.12);
+}
+:where(.dark) .text-\[\#3b7c0f\]:where(:not(.paper, .paper *)) {
+    color: #aed68a;
+}
+:where(.dark) .bg-\[\#ecfdf3\]:where(:not(.paper, .paper *)),
+:where(.dark) .bg-\[\#effbf3\]:where(:not(.paper, .paper *)),
+:where(.dark) .hover\:bg-\[\#ecfdf3\]:hover:where(:not(.paper, .paper *)) {
+    background-color: rgb(23 178 106 / 0.12);
+}
+:where(.dark) .hover\:text-\[\#067647\]:hover:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#027a48\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#05603a\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#067647\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#079455\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#12b76a\]:where(:not(.paper, .paper *)) {
+    color: #8fd3ab;
+}
+:where(.dark) .text-\[\#101828\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#1d2939\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#344054\]:where(:not(.paper, .paper *)) {
+    color: var(--foreground);
+}
+:where(.dark) .bg-\[\#f4f3ff\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(122 90 248 / 0.14);
+}
+:where(.dark) .bg-\[\#fffaeb\]:where(:not(.paper, .paper *)),
+:where(.dark) .hover\:bg-\[\#fef0c7\]\/60:hover:where(:not(.paper, .paper *)) {
+    background-color: rgb(247 144 9 / 0.12);
+}
+:where(.dark) .text-\[\#475467\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#667085\]:where(:not(.paper, .paper *)) {
+    color: var(--muted-foreground);
+}
+:where(.dark) .aria-expanded\:bg-\[\#dcfae6\][aria-expanded="true"]:where(:not(.paper, .paper *)),
+:where(.dark) .bg-\[\#d1fadf\]:where(:not(.paper, .paper *)),
+:where(.dark) .bg-\[\#dcfae6\]:where(:not(.paper, .paper *)),
+:where(.dark) .hover\:bg-\[\#dcfae6\]:hover:where(:not(.paper, .paper *)) {
+    background-color: rgb(23 178 106 / 0.2);
+}
+:where(.dark) .fill-\[\#079455\]:where(:not(.paper, .paper *)) {
+    fill: #8fd3ab;
+}
+:where(.dark) .text-\[\#6938ef\]\/80:where(:not(.paper, .paper *)) {
+    color: color-mix(in srgb, #bbb4ee 80%, transparent);
+}
+:where(.dark) .bg-\[\#f6fef9\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(23 178 106 / 0.1);
+}
+:where(.dark) .bg-\[\#eff8ff\]\/40:where(:not(.paper, .paper *)) {
+    background-color: rgb(46 144 250 / 0.048);
+}
+:where(.dark) .bg-\[\#e0eaff\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(97 114 243 / 0.2);
+}
+:where(.dark) .text-\[\#3538cd\]:where(:not(.paper, .paper *)),
+:where(.dark) .text-\[\#444ce7\]:where(:not(.paper, .paper *)) {
+    color: #adb9ee;
+}
+:where(.dark) .bg-\[\#fce7f6\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(238 70 188 / 0.2);
+}
+:where(.dark) .bg-\[\#fef0c7\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(247 144 9 / 0.2);
+}
+:where(.dark) .bg-\[\#ebe9fe\]:where(:not(.paper, .paper *)),
+:where(.dark) .hover\:bg-\[\#ebe9fe\]:hover:where(:not(.paper, .paper *)) {
+    background-color: rgb(122 90 248 / 0.22);
+}
+:where(.dark) .bg-\[\#f8f9fc\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(78 91 166 / 0.14);
+}
+:where(.dark) .text-\[\#363f72\]:where(:not(.paper, .paper *)) {
+    color: #b6b9d2;
+}
+:where(.dark) .bg-\[\#fffcf5\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(247 144 9 / 0.1);
+}
+:where(.dark) .bg-\[\#d0d5dd\]:where(:not(.paper, .paper *)) {
+    background-color: #525252;
+}
+:where(.dark) .bg-\[\#fffaeb\]\/40:where(:not(.paper, .paper *)) {
+    background-color: rgb(247 144 9 / 0.048);
+}
+:where(.dark) .bg-\[\#d1e9ff\]:where(:not(.paper, .paper *)),
+:where(.dark) .bg-\[\#e0f0ff\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(46 144 250 / 0.2);
+}
+:where(.dark) .bg-\[\#fff1f3\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(246 61 104 / 0.12);
+}
+:where(.dark) .text-\[\#c01048\]:where(:not(.paper, .paper *)) {
+    color: #efa8b6;
+}
+:where(.dark) .bg-\[\#f5faff\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(46 144 250 / 0.1);
+}
+:where(.dark) .bg-\[\#fef6fb\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(238 70 188 / 0.1);
+}
+:where(.dark) .bg-\[\#f2f2f2\]\/95:where(:not(.paper, .paper *)) {
+    background-color: color-mix(in srgb, var(--muted) 95%, transparent);
+}
+:where(.dark) .bg-\[\#f8fbff\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(46 144 250 / 0.08);
+}
+:where(.dark) .bg-\[\#ecfdf3\]\/60:where(:not(.paper, .paper *)) {
+    background-color: rgb(23 178 106 / 0.072);
+}
+:where(.dark) .bg-\[\#fef3f2\]\/60:where(:not(.paper, .paper *)) {
+    background-color: rgb(240 68 56 / 0.072);
+}
+:where(.dark) .bg-\[\#fffaeb\]\/60:where(:not(.paper, .paper *)) {
+    background-color: rgb(247 144 9 / 0.072);
+}
+:where(.dark) .border-\[\#fda29b\]:where(:not(.paper, .paper *)),
+:where(.dark) .border-\[\#fecdca\]:where(:not(.paper, .paper *)),
+:where(.dark) .border-\[\#fee4e2\]:where(:not(.paper, .paper *)) {
+    border-color: rgb(240 68 56 / 0.12);
+}
+:where(.dark) .border-\[\#f9dbaf\]:where(:not(.paper, .paper *)),
+:where(.dark) .border-\[\#fde7c9\]:where(:not(.paper, .paper *)) {
+    border-color: rgb(239 104 32 / 0.12);
+}
+:where(.dark) .border-\[\#fbe0ef\]:where(:not(.paper, .paper *)),
+:where(.dark) .border-\[\#fcceee\]:where(:not(.paper, .paper *)) {
+    border-color: rgb(238 70 188 / 0.12);
+}
+:where(.dark) .border-\[\#d9d6fe\]:where(:not(.paper, .paper *)),
+:where(.dark) .border-\[\#e4dcff\]:where(:not(.paper, .paper *)),
+:where(.dark) .border-\[\#e4e0fe\]:where(:not(.paper, .paper *)),
+:where(.dark) .border-\[\#e9e3ff\]:where(:not(.paper, .paper *)) {
+    border-color: rgb(122 90 248 / 0.12);
+}
+:where(.dark) .border-\[\#b9e6fe\]:where(:not(.paper, .paper *)),
+:where(.dark) .border-\[\#d1e9ff\]:where(:not(.paper, .paper *)),
+:where(.dark) .border-\[\#d5ecfb\]:where(:not(.paper, .paper *)) {
+    border-color: rgb(46 144 250 / 0.12);
+}
+:where(.dark) .border-\[\#99f6e0\]:where(:not(.paper, .paper *)),
+:where(.dark) .border-\[\#ccf2e8\]:where(:not(.paper, .paper *)) {
+    border-color: rgb(21 183 158 / 0.12);
+}
+:where(.dark) .border-\[\#e3f4c8\]:where(:not(.paper, .paper *)) {
+    border-color: rgb(102 198 28 / 0.12);
+}
+:where(.dark) .border-\[\#abefc6\]:where(:not(.paper, .paper *)),
+:where(.dark) .border-\[\#d1fadf\]:where(:not(.paper, .paper *)),
+:where(.dark) .border-\[\#d3f3df\]:where(:not(.paper, .paper *)) {
+    border-color: rgb(23 178 106 / 0.12);
+}
+:where(.dark) .border-\[\#fedf89\]:where(:not(.paper, .paper *)),
+:where(.dark) .border-\[\#fef0c7\]:where(:not(.paper, .paper *)) {
+    border-color: rgb(247 144 9 / 0.12);
+}
+:where(.dark) .ring-\[\#fda29b\]:where(:not(.paper, .paper *)) {
+    --tw-ring-color: rgb(240 68 56 / 0.12);
+}
+:where(.dark) .ring-\[\#fedf89\]:where(:not(.paper, .paper *)) {
+    --tw-ring-color: rgb(247 144 9 / 0.12);
+}
+:where(.dark) .border-\[\#fecdd6\]:where(:not(.paper, .paper *)) {
+    border-color: rgb(246 61 104 / 0.12);
+}
+:where(.dark) .border-\[\#d5d9eb\]:where(:not(.paper, .paper *)) {
+    border-color: rgb(78 91 166 / 0.12);
+}
+:where(.dark) .bg-\[\#fee4e2\]:where(:not(.paper, .paper *)) {
+    background-color: rgb(240 68 56 / 0.2);
+}
+:where(.dark) .border-\[\#101828\]:where(:not(.paper, .paper *)) {
+    border-color: var(--foreground);
+}
+:where(.dark) .border-\[\#eaecf0\]:where(:not(.paper, .paper *)) {
+    border-color: var(--border);
+}
+/* @dark-remap:end */
+}
+
+/* Search matches in yellow, the same in both themes (with ::highlight(search), set in components/search-highlight.tsx). */
+mark.search-mark {
+  background-color: #fde047;
+  color: #1f2328;
+}
+
+/* Primary-coloured text in dark: the primary is a fill colour and reads at
+   only ~3:1 as small text on the dark surfaces, so text takes the lighter
+   brand 700 (follows a custom primary too). Fills and borders keep it. */
+@layer utilities {
+:where(.dark) .text-primary:where(:not(.paper, .paper *)) {
+    color: var(--color-brand-700);
+}
+}
+
+/* Inventory check banner (pages/admin/enquiries/inventory-check.tsx): the
+   little robot floats and blinks; "Check again" puts the banner into a scan —
+   a soft band sweeps the container, the robot bobs faster and its antenna
+   light pulses. Reduced motion: no float, blink or sweep, the text just fades. */
+.ai-bot-body,
+.ai-bot-eyes {
+    transform-box: fill-box;
+    transform-origin: center;
+}
+.ai-bot-body { animation: ai-bot-float 3.2s ease-in-out infinite; }
+.ai-bot-eyes { animation: ai-bot-blink 4.6s ease-in-out infinite; }
+.ai-scan[data-scanning] .ai-bot-body { animation-duration: 0.9s; }
+.ai-scan[data-scanning] .ai-bot-light { animation: ai-bot-glow 0.4s ease-in-out infinite alternate; }
+.ai-scan[data-scanning]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(100deg, transparent 20%, color-mix(in oklab, var(--primary) 14%, transparent) 50%, transparent 80%);
+    animation: ai-scan-sweep 1.1s ease-in-out infinite;
+}
+.ai-scan-text { animation: ai-scan-text-in 260ms ease-out; }
+.ai-scan-note { animation: ai-scan-note 3s ease-out forwards; }
+@keyframes ai-bot-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-1.5px); }
+}
+@keyframes ai-bot-blink {
+    0%, 92%, 100% { transform: scaleY(1); }
+    95% { transform: scaleY(0.12); }
+}
+@keyframes ai-bot-glow {
+    from { opacity: 0.35; }
+    to { opacity: 1; }
+}
+@keyframes ai-scan-sweep {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+}
+@keyframes ai-scan-text-in {
+    from { opacity: 0; transform: translateY(2px); }
+}
+@keyframes ai-scan-note {
+    0% { opacity: 0; }
+    10%, 75% { opacity: 1; }
+    100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .ai-bot-body,
+    .ai-bot-eyes,
+    .ai-scan[data-scanning] .ai-bot-body,
+    .ai-scan[data-scanning] .ai-bot-light { animation: none; }
+    .ai-scan[data-scanning]::after { animation: none; background: color-mix(in oklab, var(--primary) 5%, transparent); }
+    .ai-scan-text { animation: modal-fade-in 200ms linear; }
+}
+
+/* The scanner's aiming box (components/common/scanner.tsx): a line sweeps it
+   while it looks for a code (the simulated scan too); a read turns the box
+   green with a check. The box sits on the camera's black in both themes, so
+   its colours don't change in dark. Reduced motion: no sweep, a still line
+   across the middle and a faint fill. */
+.scanner-box {
+    --scan-read: #17b26a;
+    transition: border-color 160ms ease, background-color 160ms ease;
+}
+.scanner-box[data-read] {
+    border-color: var(--scan-read);
+    background-color: color-mix(in oklab, var(--scan-read) 18%, transparent);
+}
+.scanner-line {
+    position: absolute;
+    left: 1rem;
+    right: 1rem;
+    top: 50%;
+    height: 2px;
+    border-radius: 9999px;
+    background: rgb(255 255 255 / 0.85);
+    box-shadow: 0 0 10px 2px rgb(255 255 255 / 0.4);
+}
+.scanner-box[data-seeking] .scanner-line { animation: scanner-sweep 1.4s ease-in-out infinite alternate; }
+.scanner-box[data-read] .scanner-line { opacity: 0; }
+@keyframes scanner-sweep {
+    from { top: 10%; }
+    to { top: 90%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .scanner-box { transition: none; }
+    .scanner-box[data-seeking] { background-color: rgb(255 255 255 / 0.06); }
+    .scanner-box[data-seeking] .scanner-line { animation: none; top: 50%; }
+}
+
+/* A value the AI is still extracting (ExtractingSkeleton): a soft band sweeps
+   the skeleton. Reduced motion: a still, faintly tinted block. */
+.ai-extracting { position: relative; overflow: hidden; }
+.ai-extracting::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(100deg, transparent 15%, color-mix(in oklab, var(--primary) 16%, transparent) 50%, transparent 85%);
+    animation: ai-scan-sweep 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+    .ai-extracting::after { animation: none; background: color-mix(in oklab, var(--primary) 6%, transparent); }
+}
+
+/* Spinning stroke (SpinRing): a conic gradient behind a pill; only the 1.5px of padding shows it. */
+@property --spin-angle {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 0deg;
+}
+.spin-ring {
+    display: inline-flex;
+    padding: 1.5px;
+    margin: -1.5px;
+    border-radius: 9999px;
+    background: conic-gradient(from var(--spin-angle), color-mix(in srgb, var(--spin-color) 18%, transparent) 0 55%, var(--spin-color) 100%);
+    animation: spin-ring 3.5s linear infinite;
+}
+@keyframes spin-ring {
+    to { --spin-angle: 360deg; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .spin-ring { animation: none; background: color-mix(in srgb, var(--spin-color) 55%, transparent); }
+}
