@@ -1,4 +1,4 @@
-import { CircleAlert, CircleCheck, Download, FileSpreadsheet, Info, Plus, TriangleAlert, Upload } from "lucide-react"
+import { CircleAlert, CircleCheck, Download, FileSpreadsheet, Info, Plus, Save, TriangleAlert, Upload } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -36,6 +36,10 @@ const FIELD_TYPES: { value: FieldType; label: string }[] = [
 ]
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "")
+/** The same headings, whatever their order. */
+const sig = (headings: string[]) => [...new Set(headings.map(norm).filter(Boolean))].sort().join("|")
+
+type SavedMapping = { id: string; name: string; headers: string[]; mapping: Record<string, string> }
 
 export function ImportWizard(props: Props) {
   return (
@@ -60,6 +64,10 @@ function Wizard({ onClose, kind, brand, onImported }: Props) {
   const [headerRow, setHeaderRow] = useState(1)
   const [fileError, setFileError] = useState("")
   const [mapping, setMapping] = useState<Record<string, number>>({})
+  const [mode, setMode] = useState<"skip" | "update">("skip")
+  const saved = useApi<SavedMapping[]>(`/records/import/${kind}/mappings`)
+  const [applied, setApplied] = useState<string | null>(null)
+  const [saveName, setSaveName] = useState<string | null>(null)
   const [check, setCheck] = useState<ImportCheck | null>(null)
   const [done, setDone] = useState<ImportDone | null>(null)
   const [busy, run] = useBusy()
@@ -81,11 +89,17 @@ function Wizard({ onClose, kind, brand, onImported }: Props) {
   // Map columns to fields: the mapping last used for these headings, else by heading name.
   useEffect(() => {
     if (step !== "map" || !targets.data) return
-    let saved: Record<string, string> = {}
+    // A saved mapping made for the same headings wins; then the one last used in this browser.
+    const sameHeadings = (saved.data ?? []).find((m) => sig(m.headers) === sig(headers))
+    if (sameHeadings && applied === null) {
+      applyMapping(sameHeadings)
+      return
+    }
+    let remembered: Record<string, string> = {}
     try {
-      saved = JSON.parse(localStorage.getItem(storeKey) ?? "{}") as Record<string, string>
+      remembered = JSON.parse(localStorage.getItem(storeKey) ?? "{}") as Record<string, string>
     } catch {
-      saved = {}
+      remembered = {}
     }
     setMapping((current) => {
       const next: Record<string, number> = {}
@@ -96,7 +110,7 @@ function Wizard({ onClose, kind, brand, onImported }: Props) {
           if (current[t.key] >= 0) used.add(current[t.key])
           continue
         }
-        const fromSaved = headers.findIndex((h, i) => !used.has(i) && saved[h] === t.key)
+        const fromSaved = headers.findIndex((h, i) => !used.has(i) && remembered[h] === t.key)
         const byName = headers.findIndex((h, i) => !used.has(i) && [t.label, ...t.aliases].some((a) => norm(a) === norm(h)))
         const col = fromSaved >= 0 ? fromSaved : byName
         next[t.key] = col
@@ -106,7 +120,19 @@ function Wizard({ onClose, kind, brand, onImported }: Props) {
     })
     // Runs when the step, the headings or the field list change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, targets.data, storeKey])
+  }, [step, targets.data, saved.data, storeKey])
+
+  /** Uses a saved mapping: its headings that are in this file go to their fields; everything else is unmapped. */
+  const applyMapping = (m: SavedMapping) => {
+    const next: Record<string, number> = {}
+    for (const t of targets.data ?? []) next[t.key] = -1
+    for (const [heading, key] of Object.entries(m.mapping)) {
+      const col = headers.findIndex((h) => norm(h) === norm(heading))
+      if (col >= 0) next[key] = col
+    }
+    setMapping(next)
+    setApplied(m.name)
+  }
 
   const pickFile = async (file: File | undefined) => {
     if (!file) return
@@ -120,6 +146,7 @@ function Wizard({ onClose, kind, brand, onImported }: Props) {
       setHeaderRow(Math.max(1, read[first].rows.findIndex((r) => r.some((c) => c !== "")) + 1))
       setFileName(file.name)
       setMapping({})
+      setApplied(null)
     } catch (e) {
       setFileError(e instanceof Error ? e.message : String(e))
       setSheets([])
@@ -132,6 +159,7 @@ function Wizard({ onClose, kind, brand, onImported }: Props) {
 
   const payload = () => ({
     fileName,
+    ...(kind === "brands" ? { mode } : {}),
     mapping: Object.fromEntries(Object.entries(mapping).filter(([, c]) => c >= 0).map(([k, c]) => [headers[c], k])),
     rows: data.map((r) => ({ row: r.row, values: Object.fromEntries(Object.entries(mapping).filter(([, c]) => c >= 0).map(([k, c]) => [k, r.cells[c] ?? ""])) })),
   })
@@ -226,6 +254,7 @@ function Wizard({ onClose, kind, brand, onImported }: Props) {
                       setSheetIndex(Number(v))
                       setHeaderRow(1)
                       setMapping({})
+                      setApplied(null)
                     }}
                   >
                     <SelectTrigger size="sm" className="w-full bg-card text-foreground">
@@ -270,6 +299,75 @@ function Wizard({ onClose, kind, brand, onImported }: Props) {
               <Info className="mt-0.5 size-4 shrink-0" />
               Pick the column each field comes from. Fields marked <span className="font-semibold text-foreground">*</span> are needed. Columns left unmapped are not imported.
             </p>
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+              <span className="text-sm">Saved mapping</span>
+              <Select
+                value={applied ? `name:${applied}` : NONE}
+                onValueChange={(v) => {
+                  const m = (saved.data ?? []).find((x) => `name:${x.name}` === v)
+                  if (m) applyMapping(m)
+                }}
+              >
+                <SelectTrigger size="sm" className="w-64 bg-card" aria-label="Saved mapping">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE} disabled>
+                    {saved.data?.length ? "Pick a saved mapping" : "No saved mappings yet"}
+                  </SelectItem>
+                  {(saved.data ?? []).map((m) => (
+                    <SelectItem key={m.id} value={`name:${m.name}`}>
+                      {m.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {saveName === null ? (
+                <Button size="sm" variant="outline" onClick={() => setSaveName(applied ?? "")}>
+                  <Save /> Save this mapping
+                </Button>
+              ) : (
+                <span className="flex items-center gap-1.5">
+                  <Input autoFocus value={saveName} onChange={(e) => setSaveName(e.target.value)} placeholder="e.g. Brand Register v3" className="h-8 w-56 text-foreground" />
+                  <Button
+                    size="sm"
+                    disabled={!saveName.trim()}
+                    onClick={async () => {
+                      const name = saveName.trim()
+                      const r = await attempt(() => api.post(`/records/import/${kind}/mappings`, { name, headers, mapping: payload().mapping }), `Mapping saved as ${name}. Files with the same headings will use it.`)
+                      if (r) {
+                        setApplied(name)
+                        setSaveName(null)
+                        void saved.reload()
+                      }
+                    }}
+                  >
+                    Save
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setSaveName(null)}>
+                    Cancel
+                  </Button>
+                </span>
+              )}
+              {applied && <span className="text-xs text-muted-foreground">Using {applied}. Saving under the same name replaces it.</span>}
+            </div>
+            {kind === "brands" && (
+              <div className="flex flex-col gap-1.5 rounded-lg border px-3 py-2">
+                <span className="text-sm font-medium">Brands already in Records (same website)</span>
+                <label className="flex items-start gap-2 text-sm">
+                  <input type="radio" name="mode" className="mt-1" checked={mode === "skip"} onChange={() => setMode("skip")} />
+                  <span>
+                    Skip them <span className="text-muted-foreground">: they're listed as rejected, nothing changes.</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm">
+                  <input type="radio" name="mode" className="mt-1" checked={mode === "update"} onChange={() => setMode("update")} />
+                  <span>
+                    Update them from the file <span className="text-muted-foreground">: filled cells replace their values, empty cells change nothing, new contacts and tags are added. Every change goes into the brand's history.</span>
+                  </span>
+                </label>
+              </div>
+            )}
             {targets.error && <p className="text-destructive">{targets.error}</p>}
             <MappingTable targets={targets.data ?? []} headers={headers} sample={data.slice(0, 3).map((r) => r.cells)} mapping={mapping} onChange={(k, c) => setMapping((m) => ({ ...m, [k]: c }))} />
             {unmapped.length > 0 && (
@@ -304,7 +402,9 @@ function Wizard({ onClose, kind, brand, onImported }: Props) {
           <div className="flex flex-col items-center gap-3 py-8 text-center">
             <CircleCheck className="size-8 text-[#17b26a]" />
             <p className="text-base font-semibold">
-              {plural(done.imported, kind === "brands" ? "brand" : "product")} imported{done.newOrganisations ? `, with ${plural(done.newOrganisations, "new organisation")}` : ""}.
+              {kind === "brands"
+                ? `${plural(done.newBrands ?? 0, "new brand")}${done.updates ? ` and ${plural(done.updates, "updated brand")}` : ""}${done.newOrganisations ? `, ${plural(done.newOrganisations, "new organisation")}` : ""}${done.contacts ? `, ${plural(done.contacts, "new contact")}` : ""}.`
+                : `${plural(done.imported, "product")} imported.`}
               {done.leadsOpened ? ` ${plural(done.leadsOpened, "lead")} opened at Register.` : ""}
             </p>
             {done.rejected > 0 && (
@@ -462,7 +562,16 @@ function CheckResults({ check, what, onDownload }: { check: ImportCheck; what: s
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-3 gap-3">
         <Stat label="Rows checked" value={check.total} />
-        <Stat label={`Ready to import`} value={check.ready} tone="good" hint={check.newOrganisations ? `${plural(check.newOrganisations, "new organisation")}` : undefined} />
+        <Stat
+          label="Ready to import"
+          value={check.ready}
+          tone="good"
+          hint={
+            check.newBrands !== undefined
+              ? [`${check.newBrands} new`, check.updates ? `${check.updates} updates` : "", check.newOrganisations ? plural(check.newOrganisations, "new organisation") : "", check.contacts ? plural(check.contacts, "contact") : ""].filter(Boolean).join(" · ")
+              : undefined
+          }
+        />
         <Stat label="Rejected" value={check.rejected} tone={check.rejected ? "bad" : undefined} hint={check.rejected ? "Skipped on import" : undefined} />
       </div>
       <div className="flex items-center justify-between gap-2">
@@ -485,7 +594,12 @@ function CheckResults({ check, what, onDownload }: { check: ImportCheck; what: s
             <li key={r.row} className="grid grid-cols-[80px_minmax(0,1fr)] gap-3 px-3 py-2">
               <span className="text-xs text-muted-foreground tabular-nums">Row {r.row}</span>
               <div className="flex min-w-0 flex-col gap-1">
-                {r.ok && <span className="font-medium">{r.summary}</span>}
+                {r.ok && (
+                  <span className="flex items-center gap-2 font-medium">
+                    {r.action && <span className={cn("rounded border px-1.5 text-[11px] font-normal", r.action === "update" ? "border-[#d1e9ff] bg-[#eff8ff] text-[#175cd3]" : "border-[#abefc6] bg-[#ecfdf3] text-[#067647]")}>{r.action === "update" ? "Update" : "New"}</span>}
+                    {r.summary}
+                  </span>
+                )}
                 {r.reasons.map((m, i) => (
                   <span key={i} className="flex items-start gap-1.5 text-sm">
                     <CircleAlert className="mt-0.5 size-3.5 shrink-0 text-destructive" />

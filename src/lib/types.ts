@@ -126,9 +126,9 @@ export type CustomValues = Record<string, string | number | boolean | string[] |
 /** A field a file's column can be mapped to. `custom.<key>` for fields from Settings → Fields. */
 export type ImportTarget = { key: string; label: string; required: boolean; hint: string; aliases: string[]; group: string }
 
-export type ImportRowResult = { row: number; ok: boolean; reasons: string[]; warnings: string[]; summary: string }
+export type ImportRowResult = { row: number; ok: boolean; action?: "new" | "update"; reasons: string[]; warnings: string[]; summary: string }
 
-export type ImportCheck = { total: number; ready: number; rejected: number; newOrganisations?: number; leadsOpened?: number; rows: ImportRowResult[] }
+export type ImportCheck = { total: number; ready: number; rejected: number; newBrands?: number; updates?: number; newOrganisations?: number; contacts?: number; leadsOpened?: number; rows: ImportRowResult[] }
 
 export type ImportDone = ImportCheck & { batchId: string; imported: number }
 
