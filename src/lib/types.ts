@@ -98,7 +98,7 @@ export type AuditPage = { entries: AuditEntry[]; next: string | null }
 export type ListOption = { code: string; label: string; parentCode: string | null; retired: boolean }
 
 export type RecordOptions = {
-  lists: Record<"category" | "sub_category" | "routing" | "tier" | "buying_role" | "consent_basis" | "archive_reason" | "tag" | "disqualify_reason" | "override_reason", ListOption[]>
+  lists: Record<"category" | "sub_category" | "routing" | "tier" | "buying_role" | "consent_basis" | "archive_reason" | "tag" | "disqualify_reason" | "override_reason" | "gate_change_reason", ListOption[]>
   countries: string[]
   owners: { id: string; name: string; email: string }[]
   /** Brand and product fields added in Settings → Fields (retired ones too). */
@@ -274,6 +274,8 @@ export type LeadRow = Lead & {
   brand: { id: string; name: string; domain: string; routingCode: string | null; tierCode: string | null; organisation: { id: string; name: string; excluded: boolean } }
   person: { id: string; firstName: string; lastName: string; email: string | null; emailStatus: string } | null
   lastMove: LeadMove | null
+  /** The desk gates' recommendation. */
+  recommendation: Recommendation | null
 }
 
 export type AvailableMove = {
@@ -288,6 +290,8 @@ export type AvailableMove = {
   to: string
   blockers: string[]
   warnings: string[]
+  /** For decisions: what the gates recommend, and whether this move goes against it. */
+  recommendation: (Recommendation & { stage: "desk" | "call"; override: boolean }) | null
 }
 
 export type LeadDetail = Lead & {
@@ -297,6 +301,7 @@ export type LeadDetail = Lead & {
   events: { type: string; label: string; to: string }[]
   canUndo: boolean
   undoLabel: string | null
+  recommendations: { desk: Recommendation; call: Recommendation }
 }
 
 export type Journey = {
@@ -305,3 +310,32 @@ export type Journey = {
   events: { type: string; label: string }[]
   flags: Record<string, string>
 }
+
+// ---------------------------------------------------------------- Gates
+
+export type Recommendation = { value: string; label: string; reasons: string[] }
+
+export type GateChange = { id: string; field: string; before: string | null; after: string | null; reasonCode: string | null; reason: string | null; source: string; actorLabel: string; at: string }
+
+export type GateRow = {
+  code: string
+  name: string
+  checks: string
+  stage: "desk" | "call"
+  value: "pass" | "fail" | "unknown"
+  applies: boolean
+  notApplicableReason: string | null
+  evidence: string
+  source: "default" | "auto" | "import" | "manual" | "call"
+  setBy: string | null
+  setAt: string | null
+  ruleCheck: { value: string; why: string } | null
+  disagrees: boolean
+  canEdit: boolean
+  needsReason: boolean
+  history: GateChange[]
+}
+
+export type LeadGates = { gates: GateRow[]; desk: Recommendation; call: Recommendation }
+
+export type GateDefinition = { code: string; name: string; checks: string; stage: "desk" | "call"; rule: string | null; active: boolean; sortOrder: number }

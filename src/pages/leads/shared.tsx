@@ -34,7 +34,7 @@ export function FlagChips({ labels }: { labels: string[] }) {
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-export type MoveInput = { reasonCode?: string; reason?: string; until?: string }
+export type MoveInput = { reasonCode?: string; reason?: string; until?: string; overrideReasonCode?: string; overrideReason?: string }
 
 /** What a move needs before it goes: a reason from a list, a written reason, a date. */
 export function MoveDialog({
@@ -49,6 +49,8 @@ export function MoveDialog({
   warnings,
   options,
   count,
+  recommendation,
+  bulkOverride,
   onClose,
   onConfirm,
 }: {
@@ -64,6 +66,11 @@ export function MoveDialog({
   options?: RecordOptions
   /** For bulk moves: how many leads. */
   count?: number
+  /** The gates' recommendation; `override`: this move goes against it, so a reason is needed. */
+  recommendation?: { label: string; reasons: string[]; override: boolean } | null
+  /** Bulk: some leads go against their recommendation; the override reason is used for those. */
+  bulkOverride?: number
+
   onClose: () => void
   onConfirm: (input: MoveInput) => Promise<boolean>
 }) {
@@ -71,8 +78,12 @@ export function MoveDialog({
   const [reason, setReason] = useState("")
   const [until, setUntil] = useState("")
   const [busy, setBusy] = useState(false)
+  const [overrideCode, setOverrideCode] = useState("")
+  const [overrideReason, setOverrideReason] = useState("")
+  const needsOverride = !!recommendation?.override || !!bulkOverride
+  const overrideReasons = (options?.lists.override_reason ?? []).filter((r) => !r.retired)
   const reasons = reasonList ? (options?.lists[reasonList as keyof RecordOptions["lists"]] ?? []).filter((r) => !r.retired) : []
-  const missing = (reasonList && !reasonCode) || (reasonRequired && !reason.trim()) || (untilRequired && !until)
+  const missing = (reasonList && !reasonCode) || (reasonRequired && !reason.trim()) || (untilRequired && !until) || (needsOverride && (!overrideCode || !overrideReason.trim()))
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="flex flex-col gap-0 p-0 sm:max-w-[460px]">
@@ -86,6 +97,29 @@ export function MoveDialog({
           </DialogDescription>
         </div>
         <div className="flex flex-col gap-3 px-6 py-5">
+          {recommendation && !recommendation.override && <p className="rounded-md border border-[#abefc6] bg-[#ecfdf3] px-3 py-2 text-xs text-[#067647]">The gates recommend this: {recommendation.label}.</p>}
+          {needsOverride && (
+            <div className="flex flex-col gap-2 rounded-md border border-[#fedf89] bg-[#fffaeb] px-3 py-2">
+              <p className="text-xs text-[#93370d]">
+                {bulkOverride
+                  ? `${bulkOverride} of these leads aren't recommended for this by their gates. Moving them is an override: it's allowed, needs a reason, and is flagged.`
+                  : `The gates recommend ${recommendation!.label}${recommendation!.reasons.length ? ` (${recommendation!.reasons.join("; ")})` : ""}. Moving anyway is an override: it's allowed, needs a reason, and is flagged.`}
+              </p>
+              <Select value={overrideCode} onValueChange={setOverrideCode}>
+                <SelectTrigger size="sm" className="w-full bg-card text-foreground" aria-label="Override reason">
+                  <SelectValue placeholder="Override reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  {overrideReasons.map((r) => (
+                    <SelectItem key={r.code} value={r.code}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Textarea value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} placeholder="One line: why decide differently" className="min-h-12 bg-card text-foreground" />
+            </div>
+          )}
           {warnings?.map((w) => (
             <p key={w} className="rounded-md border border-[#fedf89] bg-[#fffaeb] px-3 py-2 text-xs text-[#93370d]">
               {w}
@@ -126,7 +160,7 @@ export function MoveDialog({
             onClick={async () => {
               setBusy(true)
               try {
-                if (await onConfirm({ reasonCode: reasonCode || undefined, reason: reason.trim() || undefined, until: until || undefined })) {
+                if (await onConfirm({ reasonCode: reasonCode || undefined, reason: reason.trim() || undefined, until: until || undefined, ...(needsOverride ? { overrideReasonCode: overrideCode, overrideReason: overrideReason.trim() } : {}) })) {
                   setReasonCode("")
                   setReason("")
                   setUntil("")

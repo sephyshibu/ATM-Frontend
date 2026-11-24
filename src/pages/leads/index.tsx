@@ -14,18 +14,19 @@ import { cn } from "@/lib/utils"
 
 import { EmptyList } from "../records/shared"
 import { attempt, LoadError, Loading } from "../settings/shared"
+import { RecommendationChip } from "./gates-card"
 import { FlagChips, MoveDialog, StageChip } from "./shared"
 
 // Leads: every journey, by stage. Register is the Target checkpoint: tick brands and move them to Target, park
 // them or mark them not pursued, many at once. Each lead's own moves, undo and history are on its brand's page.
 
-type BulkMove = { key: string; label: string; help: string; to: string; untilRequired?: boolean; reasonList?: string; ends?: boolean }
+type BulkMove = { key: string; label: string; help: string; to: string; untilRequired?: boolean; reasonList?: string; ends?: boolean; agrees?: string[] }
 
 const BULK: Record<string, BulkMove[]> = {
   register: [
-    { key: "to_target", label: "Move to Target", help: "Ready for the next weekly batch.", to: "Target" },
-    { key: "park", label: "Park", help: "Not now; look again on the recheck date.", to: "Parked", untilRequired: true },
-    { key: "not_pursued", label: "Not pursued", help: "Ends these journeys, with a reason.", to: "Not pursued", reasonList: "disqualify_reason", ends: true },
+    { key: "to_target", label: "Move to Target", help: "Ready for the next weekly batch.", to: "Target", agrees: ["pursue"] },
+    { key: "park", label: "Park", help: "Not now; look again on the recheck date.", to: "Parked", untilRequired: true, agrees: ["review", "not_now"] },
+    { key: "not_pursued", label: "Not pursued", help: "Ends these journeys, with a reason.", to: "Not pursued", reasonList: "disqualify_reason", ends: true, agrees: ["not_now"] },
   ],
   target: [{ key: "back_to_register", label: "Back to Register", help: "Take them out of Target before they are sent.", to: "Register" }],
   parked: [{ key: "unpark", label: "Back to Register", help: "Look at them again now.", to: "Register" }],
@@ -56,6 +57,7 @@ export function LeadsPage() {
     placeholder: "Search brands, organisations, contacts",
     search: (l) => `${l.brand.name} ${l.brand.domain} ${l.brand.organisation.name} ${l.person ? personName(l.person) : ""}`,
     filters: [
+      { id: "rec", label: "Gates recommend", options: [...new Map(rows.filter((l) => l.recommendation).map((l) => [l.recommendation!.value, l.recommendation!.label])).entries()].map(([value, label]) => ({ value, label })), test: (l, v) => l.recommendation?.value === v },
       { id: "lane", label: "Side lane", options: [...new Set(rows.filter((l) => l.lane).map((l) => l.lane!))].map((k) => ({ value: k, label: journey.data?.lanes.find((x) => x.key === k)?.label ?? k })), test: (l, v) => l.lane === v },
       { id: "flag", label: "Flags", options: [...new Set(rows.flatMap((l) => l.flags))].map((f) => ({ value: f, label: journey.data?.flags[f] ?? f })), test: (l, v) => l.flags.includes(v) },
       { id: "source", label: "Source", options: [...new Set(rows.map((l) => l.source))].map((s) => ({ value: s, label: s })), test: (l, v) => l.source === v },
@@ -73,7 +75,8 @@ export function LeadsPage() {
   const bulkMoves = can("leads.move_target") ? (tab?.key === "lanes" && parkedOnly ? BULK.parked : (BULK[tab?.key ?? ""] ?? [])) : []
   const visibleSelected = shown.filter((l) => selected.has(l.id))
   const allTicked = shown.length > 0 && visibleSelected.length === shown.length
-  const cols = `${bulkMoves.length ? "28px " : ""}minmax(0,1.6fr) minmax(0,1.2fr) minmax(0,1.3fr) minmax(0,1.2fr) 110px minmax(0,1.6fr)`
+  const showRec = tab?.key === "register" || tab?.key === "target"
+  const cols = `${bulkMoves.length ? "28px " : ""}minmax(0,1.6fr) minmax(0,1.2fr) minmax(0,1.3fr) ${showRec ? "minmax(0,1.3fr) " : ""}minmax(0,1.2fr) 110px minmax(0,1.6fr)`
 
   const pickTab = (key: string) => {
     setSelected(new Set())
@@ -161,6 +164,7 @@ export function LeadsPage() {
             <span>Brand</span>
             <span>Organisation</span>
             <span>Stage</span>
+            {showRec && <span>Gates recommend</span>}
             <span>Main contact</span>
             <span>Since</span>
             <span>Last move</span>
@@ -191,6 +195,12 @@ export function LeadsPage() {
                   <StageChip lead={l} />
                   <FlagChips labels={l.flagLabels} />
                 </span>
+                {showRec && (
+                  <span className="flex min-w-0 flex-col gap-0.5" title={l.recommendation?.reasons.join("\n")}>
+                    {l.recommendation && <RecommendationChip rec={l.recommendation} />}
+                    {l.recommendation?.reasons[0] && <span className="truncate text-[11px] text-muted-foreground">{l.recommendation.reasons[0]}</span>}
+                  </span>
+                )}
                 <span className="truncate">{l.person ? personName(l.person) : <span className="text-muted-foreground">—</span>}</span>
                 <span className="text-xs text-muted-foreground">
                   {dateLabel(l.stageChangedAt)}
@@ -214,6 +224,7 @@ export function LeadsPage() {
           untilRequired={bulk.untilRequired}
           options={options.data}
           count={visibleSelected.length}
+          bulkOverride={bulk.agrees ? visibleSelected.filter((l) => !bulk.agrees!.includes(l.recommendation?.value ?? "")).length : 0}
           onClose={() => setBulk(null)}
           onConfirm={async (input) => {
             const r = await attempt(

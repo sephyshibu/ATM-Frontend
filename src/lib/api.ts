@@ -19,6 +19,12 @@ export class ApiError extends Error {
 /** Fired when the session has ended (signed out elsewhere, deactivated, expired): the app goes to sign-in. */
 export const SIGNED_OUT_EVENT = "atm:signed-out"
 
+/**
+ * Fired after every successful change (POST, PATCH, PUT). Every screen's data (useApi) reloads quietly, so a
+ * change in one card shows everywhere on the page at once: no refresh needed.
+ */
+export const DATA_CHANGED_EVENT = "atm:data-changed"
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   let res: Response
   try {
@@ -39,6 +45,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     const message = Array.isArray(raw) ? raw[0] : typeof raw === "string" ? raw : res.status === 403 ? "Your roles don't allow this." : "Something went wrong. Please try again."
     throw new ApiError(res.status, message)
   }
+  // A check (import preview) changes nothing, so it doesn't count.
+  if (method !== "GET" && !/\/check$/.test(path)) window.dispatchEvent(new Event(DATA_CHANGED_EVENT))
   return data as T
 }
 
@@ -76,6 +84,21 @@ export function useApi<T>(path: string | null) {
   useEffect(() => {
     void reload()
   }, [reload])
+
+  // Something changed somewhere: load again (once, shortly after, so several changes in a row cost one request).
+  useEffect(() => {
+    if (!path) return
+    let timer: number | undefined
+    const onChange = () => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => void reload(), 120)
+    }
+    window.addEventListener(DATA_CHANGED_EVENT, onChange)
+    return () => {
+      window.removeEventListener(DATA_CHANGED_EVENT, onChange)
+      window.clearTimeout(timer)
+    }
+  }, [path, reload])
 
   return { data, error, loading, reload, setData }
 }

@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils"
 
 import { Card } from "../records/shared"
 import { attempt } from "../settings/shared"
+import { GatesPanel } from "./gates-card"
 import { FlagChips, MoveDialog, OverrideDialog, StageChip } from "./shared"
 
 // The brand's journey on its page: where the lead is, the moves you can make now, undo, and every move so far.
@@ -167,6 +168,7 @@ function LeadView({ lead, brand, options, journey, onChanged }: { lead: LeadDeta
             {moves.map((m) => (
               <Button key={m.key} size="sm" variant={m.ends ? "outline" : m.key === "to_target" || m.key.startsWith("mark_") || m.key === "vp_sql" || m.key === "reply_interested" ? "default" : "outline"} className={cn(m.ends && "text-destructive")} disabled={m.blockers.length > 0} title={m.help} onClick={() => setMoving(m)}>
                 {m.label}
+                {m.recommendation?.override && <span className="ml-1 text-[10px] font-normal opacity-80">(override)</span>}
               </Button>
             ))}
           </div>
@@ -186,6 +188,8 @@ function LeadView({ lead, brand, options, journey, onChanged }: { lead: LeadDeta
         </div>
       )}
       {!lead.closed && !moves.length && <p className="text-xs text-muted-foreground">No moves for you here. {lead.available.length ? "Your roles don't allow the moves at this stage." : "The next move comes from a buyer event (email delivered, reply, booking)."}</p>}
+
+      <GatesPanel leadId={lead.id} closed={lead.closed} options={options} onChanged={onChanged} />
 
       <ol className="flex flex-col border-t pt-3">
         {lead.moves.map((m) => (
@@ -220,6 +224,7 @@ function LeadView({ lead, brand, options, journey, onChanged }: { lead: LeadDeta
           untilRequired={moving.untilRequired}
           warnings={moving.warnings}
           options={options}
+          recommendation={moving.recommendation}
           onClose={() => setMoving(null)}
           onConfirm={(input) => confirmMove(moving, input)}
         />

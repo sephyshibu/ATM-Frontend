@@ -53,7 +53,7 @@ function PersonForm({ person, organisationId, brandId, options, onClose, onSaved
 
   const customFields = fieldsFor(options, "person", person?.custom)
   const customMissing = missingRequired(customFields, custom)
-  const error = !firstName.trim() ? "Add a first name." : !orgId ? "Pick the organisation they work for." : customMissing ? `${customMissing.label} is required.` : email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()) ? "Enter a valid email address." : undefined
+  const error = !firstName.trim() ? "Add a first name." : !orgId ? "Pick the organisation they work for." : !email.trim() ? "Add the work email." : !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()) ? "Enter a valid email address." : customMissing ? `${customMissing.label} is required.` : undefined
 
   const save = async () => {
     setTried(true)
@@ -100,11 +100,11 @@ function PersonForm({ person, organisationId, brandId, options, onClose, onSaved
           <Field label="Job title" className="col-span-2">
             <Input value={jobTitle} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Head of International" className="h-8 text-foreground" />
           </Field>
-          <Field label="Work email">
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-8 text-foreground" />
+          <Field label="Work email *">
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={tried && !email.trim()} className="h-8 text-foreground" />
           </Field>
           <Field label="Email check">
-            <Select value={emailStatus} onValueChange={(v) => setEmailStatus(v as Person["emailStatus"])}>
+            <Select value={email.trim() ? emailStatus : "unknown"} onValueChange={(v) => setEmailStatus(v as Person["emailStatus"])} disabled={!email.trim()}>
               <SelectTrigger size="sm" className="w-full bg-card" aria-label="Email check">
                 <SelectValue />
               </SelectTrigger>
