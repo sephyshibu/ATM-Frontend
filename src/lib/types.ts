@@ -466,3 +466,71 @@ export type FactDefinition = {
 }
 
 export type StorageStatus = { configured: boolean; bucket: string | null; region: string; prefix: string; encryption: string; ok: boolean; error: string | null; note: string | null }
+
+// ---------------------------------------------------------------- Email templates (Step 8)
+
+export type TemplateKind = "sequence" | "booking"
+export type TemplateStep = { subject: string; body: string; delayDays: number }
+
+export type TemplateSummary = {
+  id: string
+  kind: TemplateKind
+  name: string
+  description: string
+  archived: boolean
+  live: { version: number; approvedAt: string; approvedBy: string | null } | null
+  draft: { id: string; version: number; by: string; updatedAt: string } | null
+  usedIn: number
+}
+
+export type TemplateVersion = {
+  id: string
+  version: number
+  status: "draft" | "approved" | "superseded" | "discarded"
+  steps: TemplateStep[]
+  openingFallback: string
+  note: string
+  createdAt: string
+  createdBy: string
+  updatedAt: string
+  approvedAt: string | null
+  approvedBy: string | null
+  supersededAt: string | null
+  discardedAt: string | null
+  /** I wrote or edited it (I can still approve it: recorded as self-approved). */
+  mine: boolean
+  selfApproved: boolean
+}
+
+export type TemplateDetail = {
+  id: string
+  kind: TemplateKind
+  name: string
+  description: string
+  archived: boolean
+  usedIn: number
+  versions: TemplateVersion[]
+  can: { write: boolean; approve: boolean }
+}
+
+export type MergeField = { key: string; label: string; group: string; example: string; help: string }
+
+export type TemplateRule = {
+  id: string
+  kind: TemplateKind
+  categoryCode: string
+  subCategoryCode: string
+  routingCode: string
+  template: { id: string; name: string; archived: boolean; liveVersion: number | null }
+  updatedAt: string
+}
+
+export type RenderedStep = { step: number; name: string; delayDays: number; delayUnit?: string; subject: string; body: string }
+
+export type BrandTemplates = {
+  contact: { id: string; name: string; email: string | null; why: string | null } | null
+  touchOne: "verified" | "not_verified" | "missing"
+  results: { kind: TemplateKind; template: { id: string; name: string } | null; version: number | null; matchedBy: string | null; tried: string[]; steps: RenderedStep[]; warnings: string[] }[]
+}
+
+export type TemplatePreview = { contact: BrandTemplates["contact"]; touchOne: BrandTemplates["touchOne"]; steps: RenderedStep[]; missing: string[]; usedFallbackOpening: boolean; problems: string[] }

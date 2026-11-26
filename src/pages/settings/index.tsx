@@ -11,6 +11,8 @@ import { GatesSection } from "./gates"
 import { JobsSection } from "./jobs"
 import { ListsSection } from "./lists"
 import { RolesSection } from "./roles"
+import { TemplateMatrixSection } from "./template-matrix"
+import { TemplatesSection } from "./templates"
 import { UsersSection } from "./users"
 
 // Settings: one tab per section down the left; ?section=… opens one. Anyone with "View Settings" can look;
@@ -24,6 +26,8 @@ const SECTIONS = [
   { key: "fields", title: "Fields", Section: FieldsSection },
   { key: "gates", title: "Gates", Section: GatesSection },
   { key: "facts", title: "Facts", Section: FactsSection },
+  { key: "templates", title: "Email templates", Section: TemplatesSection },
+  { key: "matrix", title: "Template matrix", Section: TemplateMatrixSection },
   { key: "jobs", title: "Jobs", Section: JobsSection },
   { key: "log", title: "Change log", Section: ChangeLogSection, permission: "audit.view" },
 ]

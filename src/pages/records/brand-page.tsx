@@ -23,6 +23,7 @@ import { PersonDialog } from "./person-dialog"
 import { ProductsCard } from "./products-card"
 import { ArchivePanel, Card, EmailStatus, HistoryList, Row } from "./shared"
 import { CustomFieldRows, fieldsFor } from "./custom-fields"
+import { BrandEmails } from "./brand-emails"
 import { KbChip, KnowledgeCard } from "./knowledge-card"
 import { TagChips } from "./tags"
 
@@ -142,6 +143,7 @@ export function BrandPage() {
         <TabsList variant="line">
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="knowledge">Knowledge base</TabsTrigger>
+          <TabsTrigger value="emails">Emails</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
         <TabsContent value="details" className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
@@ -223,6 +225,7 @@ export function BrandPage() {
           </Card>
         </TabsContent>
         <TabsContent value="knowledge">{tab === "knowledge" && <KnowledgeCard brandId={b.id} options={o} />}</TabsContent>
+        <TabsContent value="emails">{tab === "emails" && <BrandEmails brandId={b.id} />}</TabsContent>
         <TabsContent value="history">
           <Card title="History">{history.error ? <LoadError message={history.error} retry={history.reload} /> : history.data ? <HistoryList entries={history.data} /> : <Loading />}</Card>
           <p className="mt-2 text-xs text-muted-foreground">Changes to this brand, its products, its organisation and its people. Nothing here can be edited or removed.</p>
