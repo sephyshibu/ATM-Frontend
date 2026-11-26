@@ -9,15 +9,25 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { api, useApi } from "@/lib/api"
-import { countryName } from "@/lib/records"
+import { countryName, missingBuiltIn, requiredSet } from "@/lib/records"
 import type { Brand, BrandCheck, BrandDetail, Organisation, RecordOptions, TagRef } from "@/lib/types"
 
 import { attempt, useBusy } from "../settings/shared"
 import { CustomFieldInputs, customPayload, fieldsFor, missingRequired } from "./custom-fields"
 import { TagPick } from "./tags"
 
-// Add or edit a brand. The website is required: it's how the CRM spots a brand that's already in Records. While
-// you type, a check shows any brand on the same website (which blocks saving) or with a similar name (a warning).
+// Add or edit a brand. Which fields are required comes from Settings → Fields (by default the website, category and
+// sub-category). The website is how the CRM spots a brand that's already in Records: while you type, a check shows
+// any brand on the same website (which blocks saving) or with a similar name (a warning).
+
+/** "12.5M", "12,500,000" or "800K" → whole dollars; "" → null; anything else → NaN. */
+function usdInput(raw: string) {
+  const t = raw.trim().toLowerCase().replace(/usd|\$|,|\s/g, "")
+  if (!t) return null
+  const m = /^(\d+(?:\.\d+)?)(k|m|mn|b|bn)?$/.exec(t)
+  if (!m) return Number.NaN
+  return Math.round(Number(m[1]) * ({ k: 1e3, m: 1e6, mn: 1e6, b: 1e9, bn: 1e9 }[m[2] as "k"] ?? 1))
+}
 
 const NEW = "__new__"
 
@@ -62,6 +72,7 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
   const [tierCode, setTier] = useState(brand?.tierCode ?? "")
   const [homeCountry, setHome] = useState(brand?.homeCountry ?? "")
   const [revenue, setRevenue] = useState(brand?.homeRevenueUsd != null ? String(brand.homeRevenueUsd) : "")
+  const [revenueMax, setRevenueMax] = useState(brand?.homeRevenueMaxUsd != null ? String(brand.homeRevenueMaxUsd) : "")
   const [revenueYear, setYear] = useState(brand?.revenueYear != null ? String(brand.revenueYear) : "")
   const [markets, setMarkets] = useState<string[]>(brand?.asianMarketsLive ?? [])
   const [ownerId, setOwner] = useState(brand?.ownerId ?? "")
@@ -81,23 +92,61 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
   const orgOptions = [...(orgs.data ?? []).filter((o) => !o.archived).map((o) => ({ value: o.id, label: o.name, hint: o.domain ?? undefined })), ...(orgId === NEW ? [{ value: NEW, label: `New: ${newOrg.name}` }] : [])]
   const owners = (options?.owners ?? []).map((u) => ({ value: u.id, label: u.name, hint: u.email }))
 
-  const revenueNumber = revenue.trim() === "" ? null : Number(revenue.replace(/[,\s]/g, ""))
+  const revenueNumber = usdInput(revenue)
+  const revenueMaxNumber = usdInput(revenueMax)
   const blocking = check?.sameDomain[0]
+  // Required built-in fields (Settings → Fields). On an edit, only fields that had a value can't be emptied.
+  const req = requiredSet(options, "brand")
+  const orgReq = requiredSet(options, "organisation")
+  const builtInMissing = missingBuiltIn(
+    req,
+    [
+      { key: "website", label: "Brand website", value: domain, before: brand?.domain },
+      { key: "category", label: "Category", value: categoryCode, before: brand?.categoryCode },
+      { key: "subCategory", label: "Sub-category", value: subCategoryCode, before: brand?.subCategoryCode },
+      { key: "lane", label: "Lane", value: routingCode, before: brand?.routingCode },
+      { key: "tier", label: "Tier", value: tierCode, before: brand?.tierCode },
+      { key: "homeCountry", label: "Home country", value: homeCountry, before: brand?.homeCountry },
+      { key: "homeRevenueUsd", label: "Home revenue", value: revenue, before: brand?.homeRevenueUsd },
+      { key: "revenueYear", label: "Revenue year", value: revenueYear, before: brand?.revenueYear },
+      { key: "asianMarketsLive", label: "Asian markets live", value: markets, before: brand?.asianMarketsLive },
+      { key: "owner", label: "Owner at ATM", value: ownerId, before: brand?.ownerId },
+      { key: "linkedin", label: "LinkedIn page", value: linkedinUrl, before: brand?.linkedinUrl },
+      { key: "description", label: "About the brand", value: description, before: brand?.description },
+    ],
+    !!brand,
+  )
+  const newOrgMissing =
+    orgId === NEW && !brand
+      ? missingBuiltIn(
+          orgReq,
+          [
+            { key: "legalEntity", label: "The organisation's legal entity", value: newOrg.legalEntity },
+            { key: "domain", label: "The organisation's website", value: newOrg.domain },
+            { key: "hqCountry", label: "The organisation's head office", value: newOrg.hqCountry },
+          ],
+          false,
+        )
+      : undefined
   const error = !name.trim()
     ? "Give the brand a name."
-    : !domain.trim()
-      ? "Add the brand's website. It's how duplicates are caught."
-      : !orgId
-        ? "Pick the organisation the brand belongs to, or add a new one."
-        : orgId === NEW && !newOrg.name.trim()
-          ? "Give the new organisation a name."
-          : !categoryCode || !subCategoryCode
-            ? "Pick the brand's category and sub-category."
-            : customMissing
-              ? `${customMissing.label} is required.`
-              : revenueNumber !== null && (!Number.isInteger(revenueNumber) || revenueNumber < 0)
-            ? "Home revenue: whole US dollars, e.g. 12500000."
-            : undefined
+    : !orgId
+      ? "Pick the organisation the brand belongs to, or add a new one."
+      : orgId === NEW && !newOrg.name.trim()
+        ? "Give the new organisation a name."
+        : builtInMissing
+          ? builtInMissing
+          : newOrgMissing
+            ? newOrgMissing
+            : categoryCode && !subCategoryCode && req.has("subCategory")
+              ? "Pick the sub-category too."
+              : customMissing
+                ? `${customMissing.label} is required.`
+                : revenueNumber !== null && (Number.isNaN(revenueNumber) || revenueNumber < 0)
+                  ? "Home revenue: an amount like 12500000 or 12.5M."
+                  : revenueMaxNumber !== null && (Number.isNaN(revenueMaxNumber) || revenueNumber === null || revenueMaxNumber < revenueNumber)
+                    ? "Home revenue (to): an amount at least as large as the first one, or leave it empty."
+                    : undefined
 
   const save = async () => {
     setTried(true)
@@ -112,6 +161,7 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
       tierCode,
       homeCountry,
       homeRevenueUsd: revenueNumber,
+      homeRevenueMaxUsd: revenueMaxNumber,
       revenueYear: revenueYear.trim() ? Number(revenueYear) : null,
       asianMarketsLive: markets,
       ownerId,
@@ -128,15 +178,15 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
     <>
       <div className="flex flex-col gap-1 border-b px-6 py-4">
         <DialogTitle>{brand ? `Edit ${brand.name}` : "Add a brand"}</DialogTitle>
-        <DialogDescription>Name, website, organisation, category and sub-category are needed. The rest can be filled in later.</DialogDescription>
+        <DialogDescription>Fields marked * are needed (Settings → Fields decides which). The rest can be filled in later.</DialogDescription>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Brand name">
             <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} aria-invalid={tried && !name.trim()} className="h-8 text-foreground" />
           </Field>
-          <Field label="Brand website">
-            <Input value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="e.g. glowco.com" aria-invalid={(tried && !domain.trim()) || !!blocking} className="h-8 text-foreground" />
+          <Field label={req.has("website") ? "Brand website *" : "Brand website"}>
+            <Input value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="e.g. glowco.com" aria-invalid={(tried && req.has("website") && !domain.trim()) || !!blocking} className="h-8 text-foreground" />
           </Field>
         </div>
 
@@ -197,13 +247,13 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
               <Field label="New organisation name">
                 <Input value={newOrg.name} onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })} className="h-8 text-foreground" />
               </Field>
-              <Field label="Legal entity (registered name)">
+              <Field label={orgReq.has("legalEntity") ? "Legal entity (registered name) *" : "Legal entity (registered name)"}>
                 <Input value={newOrg.legalEntity} onChange={(e) => setNewOrg({ ...newOrg, legalEntity: e.target.value })} placeholder="e.g. Glow Cosmetics Pvt Ltd" className="h-8 text-foreground" />
               </Field>
-              <Field label="Organisation website (optional)">
+              <Field label={orgReq.has("domain") ? "Organisation website *" : "Organisation website (optional)"}>
                 <Input value={newOrg.domain} onChange={(e) => setNewOrg({ ...newOrg, domain: e.target.value })} className="h-8 text-foreground" />
               </Field>
-              <Field label="Head office">
+              <Field label={orgReq.has("hqCountry") ? "Head office *" : "Head office"}>
                 <SearchPick options={countries} value={newOrg.hqCountry} onChange={(v) => setNewOrg({ ...newOrg, hqCountry: v })} aria-label="Head office" />
               </Field>
               {name.trim() && newOrg.name !== name.trim() && (
@@ -235,7 +285,7 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
         )}
 
         <div className="grid grid-cols-3 gap-3">
-          <Field label="Category">
+          <Field label={req.has("category") ? "Category *" : "Category"}>
             <SearchPick
               options={pick("category", brand?.categoryCode)}
               value={categoryCode}
@@ -243,12 +293,12 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
                 setCategory(v)
                 if (v !== categoryCode) setSub("")
               }}
-              required
+              required={req.has("category")}
               aria-label="Category"
             />
           </Field>
-          <Field label="Sub-category">
-            <SearchPick options={subs} value={subCategoryCode} onChange={setSub} disabled={!categoryCode} placeholder={!categoryCode ? "Pick a category first" : subs.length ? "Choose" : "None yet: add one in Settings → Lists"} required aria-label="Sub-category" />
+          <Field label={req.has("subCategory") ? "Sub-category *" : "Sub-category"}>
+            <SearchPick options={subs} value={subCategoryCode} onChange={setSub} disabled={!categoryCode} placeholder={!categoryCode ? "Pick a category first" : subs.length ? "Choose" : "None yet: add one in Settings → Lists"} required={req.has("subCategory")} aria-label="Sub-category" />
           </Field>
           <Field label="Lane">
             <SearchPick options={pick("routing", brand?.routingCode)} value={routingCode} onChange={setRouting} aria-label="Lane" />
@@ -256,8 +306,12 @@ function BrandForm({ brand, organisationId, options, onClose, onSaved }: { brand
           <Field label="Home country">
             <SearchPick options={countries} value={homeCountry} onChange={setHome} aria-label="Home country" />
           </Field>
-          <Field label="Home revenue (USD)">
-            <Input inputMode="numeric" value={revenue} onChange={(e) => setRevenue(e.target.value)} placeholder="e.g. 12500000" className="h-8 text-foreground tabular-nums" />
+          <Field label={req.has("homeRevenueUsd") ? "Home revenue (USD) *" : "Home revenue (USD)"}>
+            <div className="flex items-center gap-1.5">
+              <Input value={revenue} onChange={(e) => setRevenue(e.target.value)} placeholder="e.g. 12.5M" aria-label="Home revenue, or the low end of a range" className="h-8 text-foreground tabular-nums" />
+              <span className="text-xs text-muted-foreground">to</span>
+              <Input value={revenueMax} onChange={(e) => setRevenueMax(e.target.value)} placeholder="optional" aria-label="High end of the revenue range" className="h-8 text-foreground tabular-nums" />
+            </div>
           </Field>
           <Field label="Revenue year">
             <Input inputMode="numeric" value={revenueYear} onChange={(e) => setYear(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="e.g. 2025" className="h-8 text-foreground tabular-nums" />

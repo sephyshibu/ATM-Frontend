@@ -14,15 +14,12 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { api, useApi } from "@/lib/api"
 import { useSession } from "@/lib/session"
-import type { CustomField, FieldType } from "@/lib/types"
+import type { BuiltInField, CustomField, FieldType } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 import { attempt, LoadError, Loading, SectionCard, useBusy } from "./shared"
 
-/** A field every brand or product has. Shown here so the full set is in one place; it can't be changed. */
-type BuiltInField = { key: string; label: string; type: string; required: boolean; unique?: string; list?: string; help: string }
-
-// Fields: the built-in fields of brands and products (read-only), and extra fields (e.g. "Shelf life (months)", "Halal certified"). They show on the
+// Fields: the built-in fields of each record (whose Required can be switched, except the few the system needs), and extra fields (e.g. "Shelf life (months)", "Halal certified"). They show on the
 // brand and product forms and pages, and imports can map columns to them. A field's type is fixed once made;
 // fields are retired, never deleted, so values already saved keep their meaning.
 
@@ -78,7 +75,7 @@ export function FieldsSection() {
       {builtIn.error ? (
         <LoadError message={builtIn.error} retry={builtIn.reload} />
       ) : builtIn.data ? (
-        <BuiltInTable fields={builtIn.data[entity]} />
+        <BuiltInTable entity={entity} fields={builtIn.data[entity]} canEdit={canEdit} onChanged={() => void builtIn.reload()} />
       ) : null}
       <h3 className="-mb-2 text-sm font-semibold">Your fields</h3>
       {fields.error ? (
@@ -229,30 +226,36 @@ function FieldForm({ field, entity, onClose, onSaved }: { field?: CustomField; e
   )
 }
 
-/** The built-in fields: always there, read-only. A field picked from a list links to that list. */
-function BuiltInTable({ fields }: { fields: BuiltInField[] }) {
+/**
+ * The built-in fields: always there, never retired. Required can be switched on or off for every field that isn't
+ * locked (it is logged); the locked ones are what the system can't work without.
+ */
+function BuiltInTable({ entity, fields, canEdit, onChanged }: { entity: Entity; fields: BuiltInField[]; canEdit: boolean; onChanged: () => void }) {
+  const [busy, run] = useBusy()
+  const toggle = async (f: BuiltInField) => {
+    const next = !f.required
+    const ok = await run(() => attempt(() => api.patch(`/records/fields/built-in/${entity}/${f.key}`, { required: next }), `${f.label} is now ${next ? "required" : "optional"}.`))
+    if (ok) onChanged()
+  }
   return (
     <div className="flex flex-col gap-2">
       <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-        Built-in fields <span className="text-xs font-normal text-muted-foreground">· always there, can't be changed or retired</span>
+        Built-in fields <span className="text-xs font-normal text-muted-foreground">· always there; switch Required on or off</span>
       </h3>
       <div className="overflow-hidden rounded-lg border">
         <div className={cn(ROW, "border-b bg-muted/40 py-2 text-xs font-medium text-muted-foreground")}>
           <span>Field</span>
           <span>Type</span>
           <span>Choices and rules</span>
-          <span>Status</span>
+          <span>Required</span>
           <span />
         </div>
         <ul className="divide-y">
           {fields.map((f) => (
             <li key={f.key} className={cn(ROW, "py-2")}>
               <span className="flex min-w-0 flex-col">
-                <span className="font-medium">
-                  {f.label}
-                  {f.required && <span className="ml-1.5 text-xs font-normal text-muted-foreground">Required</span>}
-                </span>
-                {f.help && <span className="truncate text-xs text-muted-foreground">{f.help}</span>}
+                <span className="font-medium">{f.label}</span>
+                {f.help && <span className="text-xs text-muted-foreground">{f.help}</span>}
               </span>
               <span>{f.type}</span>
               <span className="flex min-w-0 flex-col text-xs text-muted-foreground">
@@ -262,11 +265,22 @@ function BuiltInTable({ fields }: { fields: BuiltInField[] }) {
                   </Link>
                 )}
                 {f.unique && <span>{f.unique}</span>}
+                {!f.locked && f.required !== f.defaultRequired && <span>Changed from the default ({f.defaultRequired ? "required" : "optional"}).</span>}
               </span>
               <span>
-                <Chip tone={TONES.BLUE}>Built-in</Chip>
+                {f.locked ? (
+                  f.required ? <Chip tone={TONES.BLUE}>Always</Chip> : <span className="text-xs text-muted-foreground">—</span>
+                ) : (
+                  <Switch
+                    checked={f.required}
+                    disabled={!canEdit || busy}
+                    onCheckedChange={() => void toggle(f)}
+                    aria-label={`${f.label} required`}
+                    title={f.required ? "Required: new and imported records need it. Switch off to make it optional." : "Optional. Switch on to require it on new and imported records (records already saved are left as they are)."}
+                  />
+                )}
               </span>
-              <Lock className="size-3.5 text-muted-foreground" aria-label="Built-in: can't be changed" />
+              {f.locked ? <Lock className="size-3.5 text-muted-foreground" aria-label="The system needs this field as it is" /> : <span />}
             </li>
           ))}
         </ul>

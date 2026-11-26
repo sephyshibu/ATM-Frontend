@@ -1,4 +1,4 @@
-import { Pencil } from "lucide-react"
+import { Pencil, Plus } from "lucide-react"
 import { useState } from "react"
 
 import { Chip } from "@/components/common/chip"
@@ -7,6 +7,7 @@ import { TONES } from "@/components/common/tones"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { api, useApi } from "@/lib/api"
@@ -15,9 +16,10 @@ import type { GateDefinition } from "@/lib/types"
 
 import { attempt, Group, LoadError, Loading, SectionCard, useBusy } from "./shared"
 
-// Gates: the six checks on every lead. Desk gates (01–03) decide Target; call gates (04–06) are confirmed after
-// the call. A gate can be renamed, described and switched off for everyone (with a reason); per brand, a gate is
-// unticked on the brand's page instead. The recommendation rules are fixed and shown here.
+// Gates: the checks on every lead. Desk gates decide Target; call gates are confirmed after the call. More gates can
+// be added (numbered after the last one), and any gate can be renamed, described and switched off for everyone
+// (with a reason), never deleted; per brand, a gate is unticked on the brand's page instead. The recommendation
+// rules are fixed and shown here.
 
 const RULES: Record<string, string> = {
   category: "Checked against the brand's category.",
@@ -29,11 +31,23 @@ export function GatesSection() {
   const { can } = useSession()
   const gates = useApi<GateDefinition[]>("/gates")
   const [editing, setEditing] = useState<GateDefinition | null>(null)
+  const [adding, setAdding] = useState(false)
   const canEdit = can("settings.edit")
   const list = gates.data ?? []
 
   return (
-    <SectionCard value="gates" title="Gates" description="The six checks every lead goes through. Gates guide and never block: a decision against them is an override with a reason." canEdit={canEdit} lock={false}>
+    <SectionCard
+      value="gates"
+      title="Gates"
+      description="The checks every lead goes through. Gates guide and never block: a decision against them is an override with a reason."
+      canEdit={canEdit}
+      lock={false}
+      action={
+        <Button size="sm" onClick={() => setAdding(true)}>
+          <Plus /> Add a gate
+        </Button>
+      }
+    >
       {gates.error ? (
         <LoadError message={gates.error} retry={gates.reload} />
       ) : !gates.data ? (
@@ -63,6 +77,15 @@ export function GatesSection() {
             </ul>
           </Group>
         ))
+      )}
+      {adding && (
+        <GateAdd
+          onClose={() => setAdding(false)}
+          onSaved={() => {
+            setAdding(false)
+            void gates.reload()
+          }}
+        />
       )}
       {editing && (
         <GateEdit
@@ -120,6 +143,57 @@ function GateEdit({ gate, onClose, onSaved }: { gate: GateDefinition; onClose: (
             }}
           >
             Save
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** A new gate: numbered after the last one, checked by hand or from the Brand Register. */
+export function GateAdd({ initialName = "", onClose, onSaved }: { initialName?: string; onClose: () => void; onSaved: (g: GateDefinition) => void }) {
+  const [name, setName] = useState(initialName)
+  const [checks, setChecks] = useState("")
+  const [stage, setStage] = useState<"desk" | "call">("desk")
+  const [busy, run] = useBusy()
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="flex flex-col gap-0 p-0 sm:max-w-[480px]">
+        <div className="flex flex-col gap-1 border-b px-6 py-4">
+          <DialogTitle>Add a gate</DialogTitle>
+          <DialogDescription>It's added to every lead at once and counts in its stage's recommendation. Until someone checks it, it shows as not checked, so recommendations may move to Review.</DialogDescription>
+        </div>
+        <div className="flex flex-col gap-3 px-6 py-5">
+          <Field label="Name">
+            <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. No in-house Asia team" className="h-8 text-foreground" />
+          </Field>
+          <Field label="What it checks">
+            <Textarea value={checks} onChange={(e) => setChecks(e.target.value)} placeholder="e.g. The brand has no Asia capability of its own and 15–80 staff." className="min-h-16 text-foreground" />
+          </Field>
+          <Field label="When it's checked">
+            <Select value={stage} onValueChange={(v) => setStage(v as "desk" | "call")}>
+              <SelectTrigger size="sm" className="w-full bg-card text-foreground">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desk">At the desk: decides Target</SelectItem>
+                <SelectItem value="call">On the call: confirmed after the qualifying call</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+        <div className="flex justify-end gap-2 border-t px-6 py-3">
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            disabled={busy || name.trim().length < 2}
+            onClick={async () => {
+              const g = await run(() => attempt(() => api.post<GateDefinition>("/gates", { name: name.trim(), checks: checks.trim(), stage }), (g) => `Gate ${g.code} ${g.name} added.`))
+              if (g) onSaved(g)
+            }}
+          >
+            Add gate
           </Button>
         </div>
       </DialogContent>

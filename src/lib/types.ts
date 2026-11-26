@@ -98,12 +98,17 @@ export type AuditPage = { entries: AuditEntry[]; next: string | null }
 export type ListOption = { code: string; label: string; parentCode: string | null; retired: boolean }
 
 export type RecordOptions = {
-  lists: Record<"category" | "sub_category" | "routing" | "tier" | "buying_role" | "consent_basis" | "archive_reason" | "tag" | "disqualify_reason" | "override_reason" | "gate_change_reason", ListOption[]>
+  lists: Record<"category" | "sub_category" | "routing" | "tier" | "buying_role" | "consent_basis" | "archive_reason" | "tag" | "disqualify_reason" | "override_reason" | "gate_change_reason" | "fact_source_tier" | "fact_reject_reason", ListOption[]>
   countries: string[]
   owners: { id: string; name: string; email: string }[]
   /** Brand and product fields added in Settings → Fields (retired ones too). */
   fields: CustomField[]
+  /** Built-in fields that are required now, by record type (Settings → Fields). */
+  required?: Record<"organisation" | "brand" | "product" | "person", string[]>
 }
+
+/** A field every record has. Its Required can be switched in Settings → Fields unless it's locked. */
+export type BuiltInField = { key: string; label: string; type: string; required: boolean; defaultRequired: boolean; locked: boolean; unique?: string; list?: string; help: string }
 
 export type FieldType = "text" | "long_text" | "number" | "date" | "yes_no" | "choice" | "multi_choice"
 
@@ -124,11 +129,26 @@ export type CustomField = {
 export type CustomValues = Record<string, string | number | boolean | string[] | null>
 
 /** A field a file's column can be mapped to. `custom.<key>` for fields from Settings → Fields. */
-export type ImportTarget = { key: string; label: string; required: boolean; hint: string; aliases: string[]; group: string }
+export type TargetChoice = { value: string; label: string; id?: string; parent?: string | null }
+export type ImportTarget = {
+  key: string
+  label: string
+  required: boolean
+  hint: string
+  aliases: string[]
+  group: string
+  /** Fields with set values: what a cell can be mapped to. */
+  choices?: TargetChoice[]
+  /** Where a new value can be added from the mapping step. */
+  addTo?: { kind: "list"; listKey: string; parentFrom?: string } | { kind: "fact"; key: string } | { kind: "custom"; id: string } | null
+  multi?: boolean
+  /** Takes several columns (notes, long text): joined, one line each. */
+  joinable?: boolean
+}
 
 export type ImportRowResult = { row: number; ok: boolean; action?: "new" | "update"; reasons: string[]; warnings: string[]; summary: string }
 
-export type ImportCheck = { total: number; ready: number; rejected: number; newBrands?: number; updates?: number; newOrganisations?: number; contacts?: number; leadsOpened?: number; rows: ImportRowResult[] }
+export type ImportCheck = { total: number; ready: number; rejected: number; newBrands?: number; updates?: number; newOrganisations?: number; contacts?: number; leadsOpened?: number; facts?: number; dossierLinks?: number; rows: ImportRowResult[] }
 
 export type ImportDone = ImportCheck & { batchId: string; imported: number }
 
@@ -159,7 +179,7 @@ export type Organisation = Audited & {
 type GroupCompany = { id: string; name: string; domain: string | null; excluded: boolean; archivedAt: string | null }
 
 export type OrganisationDetail = Organisation & {
-  brands: { id: string; name: string; domain: string; categoryCode: string | null; routingCode: string | null; archivedAt: string | null }[]
+  brands: { id: string; name: string; domain: string | null; categoryCode: string | null; routingCode: string | null; archivedAt: string | null }[]
   people: { id: string; firstName: string; lastName: string; jobTitle: string; email: string | null; archivedAt: string | null }[]
   parent: GroupCompany | null
   members: GroupCompany[]
@@ -169,12 +189,14 @@ export type Brand = Audited & {
   id: string
   organisationId: string
   name: string
-  domain: string
+  domain: string | null
   categoryCode: string | null
   subCategoryCode: string | null
   routingCode: string | null
   homeCountry: string | null
   homeRevenueUsd: number | null
+  /** The high end when the revenue is a range. */
+  homeRevenueMaxUsd: number | null
   revenueYear: number | null
   asianMarketsLive: string[]
   tierCode: string | null
@@ -183,6 +205,9 @@ export type Brand = Audited & {
   description: string
   linkedinUrl: string | null
   custom: CustomValues
+  /** The knowledge base: worked out by the system from the facts. */
+  kbStatus: KbStatus
+  kbVerifiedAt: string | null
 }
 
 export type BrandRow = Brand & { organisation: { id: string; name: string; excluded: boolean }; owner: { id: string; name: string } | null; peopleCount: number; productCount: number; tags: TagRef[] }
@@ -230,10 +255,10 @@ export type BrandDetail = Brand & {
 
 export type BrandCheck = {
   domain: string | null
-  sameDomain: { id: string; name: string; domain: string; archived: boolean; organisation: { name: string } }[]
-  similar: { id: string; name: string; domain: string; organisation: { name: string } }[]
+  sameDomain: { id: string; name: string; domain: string | null; archived: boolean; organisation: { name: string } }[]
+  similar: { id: string; name: string; domain: string | null; organisation: { name: string } }[]
   /** Brands of other organisations in the same parent group. */
-  sameGroup: { group: { id: string; name: string }; brands: { id: string; name: string; domain: string; organisation: { name: string } }[] } | null
+  sameGroup: { group: { id: string; name: string }; brands: { id: string; name: string; domain: string | null; organisation: { name: string } }[] } | null
 }
 
 // ---------------------------------------------------------------- Leads
@@ -271,7 +296,7 @@ export type Lead = {
 }
 
 export type LeadRow = Lead & {
-  brand: { id: string; name: string; domain: string; routingCode: string | null; tierCode: string | null; organisation: { id: string; name: string; excluded: boolean } }
+  brand: { id: string; name: string; domain: string | null; routingCode: string | null; tierCode: string | null; kbStatus: KbStatus; organisation: { id: string; name: string; excluded: boolean } }
   person: { id: string; firstName: string; lastName: string; email: string | null; emailStatus: string } | null
   lastMove: LeadMove | null
   /** The desk gates' recommendation. */
@@ -326,6 +351,8 @@ export type GateRow = {
   applies: boolean
   notApplicableReason: string | null
   evidence: string
+  /** Free notes on this gate for the brand. */
+  note: string
   source: "default" | "auto" | "import" | "manual" | "call"
   setBy: string | null
   setAt: string | null
@@ -339,3 +366,103 @@ export type GateRow = {
 export type LeadGates = { gates: GateRow[]; desk: Recommendation; call: Recommendation }
 
 export type GateDefinition = { code: string; name: string; checks: string; stage: "desk" | "call"; rule: string | null; active: boolean; sortOrder: number }
+
+// ---------------------------------------------------------------- Knowledge base
+
+export type KbStatus = "not_started" | "in_progress" | "verified" | "stale"
+
+export type FactType = "text" | "long_text" | "number" | "usd" | "date" | "yes_no" | "choice" | "multi_choice"
+export type FactValue = string | number | boolean | string[] | null
+
+export type Dossier = {
+  id: string
+  kind: "file" | "link"
+  title: string
+  sourceUrl: string | null
+  fileName: string | null
+  fileType: "pdf" | "docx" | "doc" | null
+  fileTypeLabel: string | null
+  sizeBytes: number | null
+  size: string | null
+  /** uploading | queued | fetching | stored | linked (a Google link, opened with your own sign-in) | link_only | failed */
+  status: "uploading" | "queued" | "fetching" | "stored" | "linked" | "link_only" | "failed"
+  statusNote: string | null
+  origin: "upload" | "import" | "link"
+  note: string
+  createdAt: string
+  createdBy: string | null
+  storedAt: string | null
+  archivedAt: string | null
+  archiveReason: string | null
+  /** A Google Docs/Drive link. */
+  google: boolean
+  /** "Marked as checked": someone opened it and confirmed it's the right, correct dossier. */
+  checked: { at: string; by: string | null; note: string; versionDate: string | null; self: boolean } | null
+}
+
+export type FactVersion = {
+  id: string
+  value: FactValue
+  source: string
+  sourceTierCode: string | null
+  sourceTier: string | null
+  evidenceDate: string
+  refreshDue: string
+  stale: boolean
+  status: "entered" | "verified" | "rejected"
+  origin: "manual" | "import"
+  note: string
+  dossier: { id: string; title: string; archived: boolean } | null
+  enteredBy: string
+  enteredAt: string
+  /** Entered by the person looking. */
+  mine: boolean
+  verifiedBy: string | null
+  verifiedAt: string | null
+  selfVerified: boolean
+  rejectedBy: string | null
+  rejectedAt: string | null
+  rejectReason: string | null
+  supersededAt: string | null
+}
+
+export type FactField = {
+  key: string
+  label: string
+  help: string
+  type: FactType
+  options: string[]
+  required: boolean
+  refreshDays: number
+  /** From the brand's own details, when nothing is entered yet. */
+  suggested: FactValue
+  current: FactVersion | null
+  history: FactVersion[]
+}
+
+export type KnowledgeBase = {
+  status: { status: KbStatus; label: string; basis?: "required" | "entered"; required: number; verified: number; waiting: string[]; missing: string[]; stale: string[]; verifiedAt: string | null }
+  groups: { code: string; label: string; fields: FactField[] }[]
+  archived: boolean
+  can: { enter: boolean; verify: boolean; verifyOwn: boolean; attach: boolean }
+  today: string
+  dossiers: Dossier[]
+  storage: { configured: boolean }
+  maxMb: number
+}
+
+export type FactDefinition = {
+  key: string
+  label: string
+  groupCode: "company" | "asia" | "regulatory" | "outreach"
+  help: string
+  type: FactType
+  options: string[]
+  required: boolean
+  refreshDays: number
+  brandField: string | null
+  active: boolean
+  sortOrder: number
+}
+
+export type StorageStatus = { configured: boolean; bucket: string | null; region: string; prefix: string; encryption: string; ok: boolean; error: string | null; note: string | null }

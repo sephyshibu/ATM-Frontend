@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { api, useApi } from "@/lib/api"
-import { countryName, personName } from "@/lib/records"
+import { countryName, missingBuiltIn, personName, requiredSet } from "@/lib/records"
 import type { Organisation, OrganisationDetail, Person, PersonRow, RecordOptions } from "@/lib/types"
 
 import { attempt, useBusy } from "../settings/shared"
@@ -53,7 +53,34 @@ function PersonForm({ person, organisationId, brandId, options, onClose, onSaved
 
   const customFields = fieldsFor(options, "person", person?.custom)
   const customMissing = missingRequired(customFields, custom)
-  const error = !firstName.trim() ? "Add a first name." : !orgId ? "Pick the organisation they work for." : !email.trim() ? "Add the work email." : !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()) ? "Enter a valid email address." : customMissing ? `${customMissing.label} is required.` : undefined
+  // Required built-in fields come from Settings → Fields (the work email by default).
+  const req = requiredSet(options, "person")
+  const builtInMissing = missingBuiltIn(
+    req,
+    [
+      { key: "lastName", label: "Last name", value: lastName, before: person?.lastName },
+      { key: "jobTitle", label: "Job title", value: jobTitle, before: person?.jobTitle },
+      { key: "email", label: "Work email", value: email, before: person?.email },
+      { key: "phone", label: "Phone", value: phone, before: person?.phone },
+      { key: "country", label: "Country", value: country, before: person?.country },
+      { key: "linkedin", label: "LinkedIn profile", value: linkedinUrl, before: person?.linkedinUrl },
+      { key: "buyingRole", label: "Buying role", value: buyingRoleCode, before: person?.buyingRoleCode },
+      { key: "consent", label: "Consent to contact", value: consentCode, before: person?.consentCode },
+      { key: "notes", label: "Notes", value: notes, before: person?.notes },
+    ],
+    !!person,
+  )
+  const error = !firstName.trim()
+    ? "Add a first name."
+    : !orgId
+      ? "Pick the organisation they work for."
+      : builtInMissing
+        ? builtInMissing
+        : email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
+          ? "Enter a valid email address."
+          : customMissing
+            ? `${customMissing.label} is required.`
+            : undefined
 
   const save = async () => {
     setTried(true)
@@ -100,8 +127,8 @@ function PersonForm({ person, organisationId, brandId, options, onClose, onSaved
           <Field label="Job title" className="col-span-2">
             <Input value={jobTitle} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Head of International" className="h-8 text-foreground" />
           </Field>
-          <Field label="Work email *">
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={tried && !email.trim()} className="h-8 text-foreground" />
+          <Field label={req.has("email") ? "Work email *" : "Work email"}>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={tried && req.has("email") && !email.trim()} className="h-8 text-foreground" />
           </Field>
           <Field label="Email check">
             <Select value={email.trim() ? emailStatus : "unknown"} onValueChange={(v) => setEmailStatus(v as Person["emailStatus"])} disabled={!email.trim()}>

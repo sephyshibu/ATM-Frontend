@@ -6,6 +6,7 @@ import { useSession } from "@/lib/session"
 import { ChangeLogSection } from "./change-log"
 import { ConfigSection } from "./config"
 import { FieldsSection } from "./fields"
+import { FactsSection } from "./facts"
 import { GatesSection } from "./gates"
 import { JobsSection } from "./jobs"
 import { ListsSection } from "./lists"
@@ -22,6 +23,7 @@ const SECTIONS = [
   { key: "lists", title: "Lists", Section: ListsSection },
   { key: "fields", title: "Fields", Section: FieldsSection },
   { key: "gates", title: "Gates", Section: GatesSection },
+  { key: "facts", title: "Facts", Section: FactsSection },
   { key: "jobs", title: "Jobs", Section: JobsSection },
   { key: "log", title: "Change log", Section: ChangeLogSection, permission: "audit.view" },
 ]

@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/lib/api"
-import { optionLabel } from "@/lib/records"
+import { missingBuiltIn, optionLabel, requiredSet } from "@/lib/records"
 import type { Product, RecordOptions } from "@/lib/types"
 
 import { attempt, useBusy } from "../settings/shared"
@@ -45,9 +45,21 @@ function ProductForm({ brand, product, options, onClose, onSaved }: { brand: Bra
   const subs = (lists?.sub_category ?? []).filter((o) => o.parentCode === categoryCode && (!o.retired || o.code === product?.subCategoryCode)).map((o) => ({ value: o.code, label: o.label }))
   const brandCategory = [optionLabel(options, "category", brand.categoryCode), optionLabel(options, "sub_category", brand.subCategoryCode)].filter(Boolean).join(" › ")
 
+  // Required built-in fields come from Settings → Fields (only the name, by default).
+  const builtInMissing = missingBuiltIn(
+    requiredSet(options, "product"),
+    [
+      { key: "sku", label: "SKU", value: sku, before: product?.sku },
+      { key: "category", label: "Category", value: categoryCode, before: product?.categoryCode },
+      { key: "subCategory", label: "Sub-category", value: subCategoryCode, before: product?.subCategoryCode },
+      { key: "description", label: "Description", value: description, before: product?.description },
+    ],
+    !!product,
+  )
+
   const save = async () => {
     setTried(true)
-    if (!name.trim() || customMissing) return
+    if (!name.trim() || customMissing || builtInMissing) return
     const body = { name: name.trim(), sku, categoryCode, subCategoryCode, description, tagCodes, custom: customPayload(customFields, custom) }
     const r = await run(() =>
       attempt(() => (product ? api.patch<Product[]>(`/records/products/${product.id}`, body) : api.post<Product[]>(`/records/brands/${brand.id}/products`, body)), product ? "Saved." : `${name.trim()} added.`),
@@ -59,7 +71,7 @@ function ProductForm({ brand, product, options, onClose, onSaved }: { brand: Bra
     <>
       <div className="flex flex-col gap-1 border-b px-6 py-4">
         <DialogTitle>{product ? `Edit ${product.name}` : `Add a product to ${brand.name}`}</DialogTitle>
-        <DialogDescription>Only the name is needed. Leave the category empty to use the brand's{brandCategory ? ` (${brandCategory})` : ""}.</DialogDescription>
+        <DialogDescription>The name is needed{requiredSet(options, "product").size ? ", and the fields Settings → Fields makes required" : ""}. Leave the category empty to use the brand's{brandCategory ? ` (${brandCategory})` : ""}.</DialogDescription>
       </div>
       <div className="grid grid-cols-2 gap-3 overflow-y-auto px-6 py-5">
         <Field label="Product name">
@@ -90,7 +102,7 @@ function ProductForm({ brand, product, options, onClose, onSaved }: { brand: Bra
         <Field label="Description" className="col-span-2">
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-16 text-foreground" />
         </Field>
-        {tried && (!name.trim() || customMissing) && <p className="col-span-2 text-xs text-destructive">{!name.trim() ? "Give the product a name." : `${customMissing!.label} is required.`}</p>}
+        {tried && (!name.trim() || builtInMissing || customMissing) && <p className="col-span-2 text-xs text-destructive">{!name.trim() ? "Give the product a name." : (builtInMissing ?? `${customMissing!.label} is required.`)}</p>}
       </div>
       <div className="flex justify-end gap-2 border-t px-6 py-3">
         <Button variant="ghost" onClick={onClose}>

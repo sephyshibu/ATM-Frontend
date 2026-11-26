@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { api, useApi } from "@/lib/api"
-import { countryName } from "@/lib/records"
+import { countryName, missingBuiltIn, requiredSet } from "@/lib/records"
 import type { Organisation, OrganisationDetail, RecordOptions } from "@/lib/types"
 
 import { attempt, useBusy } from "../settings/shared"
@@ -48,7 +48,20 @@ function OrganisationForm({ org, options, onClose, onSaved }: { org?: Organisati
   const groups = (all.data ?? []).filter((o) => !o.archived && o.id !== org?.id).map((o) => ({ value: o.id, label: o.name, hint: o.domain ?? undefined }))
   const exclusionChanged = excluded !== (org?.excluded ?? false)
 
-  const error = !name.trim() ? "Give the organisation a name." : customMissing ? `${customMissing.label} is required.` : exclusionChanged && !why.trim() ? (excluded ? "Say why this organisation is excluded." : "Say why the exclusion is lifted.") : undefined
+  // Required built-in fields come from Settings → Fields.
+  const builtInMissing = missingBuiltIn(
+    requiredSet(options, "organisation"),
+    [
+      { key: "legalEntity", label: "Legal entity", value: legalEntity, before: org?.legalEntity },
+      { key: "domain", label: "Website", value: domain, before: org?.domain },
+      { key: "hqCountry", label: "Head office country", value: hqCountry, before: org?.hqCountry },
+      { key: "parent", label: "Parent group", value: parentId, before: org?.parentId },
+      { key: "linkedin", label: "LinkedIn page", value: linkedinUrl, before: org?.linkedinUrl },
+      { key: "notes", label: "Notes", value: notes, before: org?.notes },
+    ],
+    !!org,
+  )
+  const error = !name.trim() ? "Give the organisation a name." : builtInMissing ? builtInMissing : customMissing ? `${customMissing.label} is required.` : exclusionChanged && !why.trim() ? (excluded ? "Say why this organisation is excluded." : "Say why the exclusion is lifted.") : undefined
 
   const save = async () => {
     setTried(true)

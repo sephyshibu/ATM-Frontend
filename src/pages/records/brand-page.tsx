@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { api, useApi } from "@/lib/api"
 import { dateLabel, numberLabel } from "@/lib/format"
-import { countryName, optionLabel, personName, siteUrl, useRecordOptions } from "@/lib/records"
+import { countryName, optionLabel, personName, siteUrl, usdRange, useRecordOptions } from "@/lib/records"
 import { useSession } from "@/lib/session"
 import type { AuditEntry, BrandDetail, PersonRow } from "@/lib/types"
 
@@ -23,10 +23,11 @@ import { PersonDialog } from "./person-dialog"
 import { ProductsCard } from "./products-card"
 import { ArchivePanel, Card, EmailStatus, HistoryList, Row } from "./shared"
 import { CustomFieldRows, fieldsFor } from "./custom-fields"
+import { KbChip, KnowledgeCard } from "./knowledge-card"
 import { TagChips } from "./tags"
 
 // One brand: its details and tags, its products, the people at its organisation who work on it (one can be the
-// main contact), and its history.
+// main contact), its knowledge base (dossiers and facts), and its history.
 
 export function BrandPage() {
   const { id = "" } = useParams()
@@ -65,10 +66,14 @@ export function BrandPage() {
               {b.archived && <Chip tone={MUTED}>Archived</Chip>}
             </h1>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-              <a href={siteUrl(b.domain)} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-foreground">
-                {b.domain} <ExternalLink className="size-3" />
-              </a>
-              <span>·</span>
+              {b.domain && (
+                <>
+                  <a href={siteUrl(b.domain)} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-foreground">
+                    {b.domain} <ExternalLink className="size-3" />
+                  </a>
+                  <span>·</span>
+                </>
+              )}
               <Link to={`/records/organisations/${b.organisation.id}`} className="hover:text-foreground hover:underline">
                 {b.organisation.name}
               </Link>
@@ -78,6 +83,9 @@ export function BrandPage() {
               {b.subCategoryCode && <Chip tone={BLUE}>{label("sub_category", b.subCategoryCode)}</Chip>}
               {b.routingCode && <Chip tone={VIOLET}>Lane: {label("routing", b.routingCode)}</Chip>}
               {b.tierCode && <Chip tone={AMBER}>{label("tier", b.tierCode)}</Chip>}
+              <button type="button" className="rounded-full" onClick={() => setTab("knowledge")} aria-label="Open the knowledge base">
+                <KbChip status={b.kbStatus} />
+              </button>
             </div>
             <TagChips tags={b.tags} className="mt-1" />
           </div>
@@ -133,6 +141,7 @@ export function BrandPage() {
       <Tabs value={tab} onValueChange={setTab} className="gap-4">
         <TabsList variant="line">
           <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="knowledge">Knowledge base</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
         <TabsContent value="details" className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
@@ -152,7 +161,7 @@ export function BrandPage() {
                 )}
               </Row>
               <Row label="Home country">{countryName(b.homeCountry)}</Row>
-              <Row label="Home revenue">{b.homeRevenueUsd != null ? `USD ${numberLabel(b.homeRevenueUsd)}${b.revenueYear ? ` (${b.revenueYear})` : ""}` : null}</Row>
+              <Row label="Home revenue">{b.homeRevenueUsd != null ? `${b.homeRevenueMaxUsd != null ? usdRange(b.homeRevenueUsd, b.homeRevenueMaxUsd) : `USD ${numberLabel(b.homeRevenueUsd)}`}${b.revenueYear ? ` (${b.revenueYear})` : ""}` : null}</Row>
               <Row label="Asian markets live">{b.asianMarketsLive.map(countryName).join(", ")}</Row>
               <Row label="Owner at ATM">{b.owner?.name}</Row>
               <Row label="LinkedIn">
@@ -213,6 +222,7 @@ export function BrandPage() {
             )}
           </Card>
         </TabsContent>
+        <TabsContent value="knowledge">{tab === "knowledge" && <KnowledgeCard brandId={b.id} options={o} />}</TabsContent>
         <TabsContent value="history">
           <Card title="History">{history.error ? <LoadError message={history.error} retry={history.reload} /> : history.data ? <HistoryList entries={history.data} /> : <Loading />}</Card>
           <p className="mt-2 text-xs text-muted-foreground">Changes to this brand, its products, its organisation and its people. Nothing here can be edited or removed.</p>

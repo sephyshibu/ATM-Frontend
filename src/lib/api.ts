@@ -50,11 +50,47 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data as T
 }
 
+/**
+ * Sends a file (multipart form) and reports progress from 0 to 1. Uses XMLHttpRequest because fetch can't report
+ * upload progress. Same rules as every change: the session cookie, the client header, the same error messages.
+ */
+function upload<T>(path: string, form: FormData, onProgress?: (share: number) => void): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open("POST", `${BASE}${path}`)
+    xhr.withCredentials = true
+    xhr.setRequestHeader("Accept", "application/json")
+    xhr.setRequestHeader("X-ATM-Client", "web")
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total)
+    }
+    xhr.onerror = () => reject(new ApiError(0, "Can't reach the ATM server. Check your connection and try again."))
+    xhr.onload = () => {
+      let data: { message?: unknown } | null = null
+      try {
+        data = xhr.responseText ? JSON.parse(xhr.responseText) : null
+      } catch {
+        data = null
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        window.dispatchEvent(new Event(DATA_CHANGED_EVENT))
+        return resolve(data as T)
+      }
+      if (xhr.status === 401) window.dispatchEvent(new Event(SIGNED_OUT_EVENT))
+      const raw = data?.message
+      const message = Array.isArray(raw) ? String(raw[0]) : typeof raw === "string" ? raw : xhr.status === 413 ? "The file is too large." : xhr.status === 403 ? "Your roles don't allow this." : "Something went wrong. Please try again."
+      reject(new ApiError(xhr.status, message))
+    }
+    xhr.send(form)
+  })
+}
+
 export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body: unknown = {}) => request<T>("POST", path, body),
   patch: <T>(path: string, body: unknown) => request<T>("PATCH", path, body),
   put: <T>(path: string, body: unknown) => request<T>("PUT", path, body),
+  upload,
 }
 
 /** Loads `path` (null = nothing yet) and keeps the result; reload() fetches again, setData() updates in place. */

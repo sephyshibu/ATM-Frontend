@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 import { EmptyList } from "../records/shared"
 import { attempt, LoadError, Loading } from "../settings/shared"
 import { RecommendationChip } from "./gates-card"
+import { KbChip } from "../records/knowledge-card"
 import { FlagChips, MoveDialog, StageChip } from "./shared"
 
 // Leads: every journey, by stage. Register is the Target checkpoint: tick brands and move them to Target, park
@@ -55,9 +56,10 @@ export function LeadsPage() {
 
   const { shown, toolbar } = useListControls(rows, {
     placeholder: "Search brands, organisations, contacts",
-    search: (l) => `${l.brand.name} ${l.brand.domain} ${l.brand.organisation.name} ${l.person ? personName(l.person) : ""}`,
+    search: (l) => `${l.brand.name} ${l.brand.domain ?? ""} ${l.brand.organisation.name} ${l.person ? personName(l.person) : ""}`,
     filters: [
       { id: "rec", label: "Gates recommend", options: [...new Map(rows.filter((l) => l.recommendation).map((l) => [l.recommendation!.value, l.recommendation!.label])).entries()].map(([value, label]) => ({ value, label })), test: (l, v) => l.recommendation?.value === v },
+      { id: "kb", label: "Knowledge base", options: [["not_started", "Not started"], ["in_progress", "In progress"], ["verified", "Verified"], ["stale", "Needs a refresh"]].filter(([v]) => rows.some((l) => l.brand.kbStatus === v)).map(([value, label]) => ({ value, label })), test: (l, v) => l.brand.kbStatus === v },
       { id: "lane", label: "Side lane", options: [...new Set(rows.filter((l) => l.lane).map((l) => l.lane!))].map((k) => ({ value: k, label: journey.data?.lanes.find((x) => x.key === k)?.label ?? k })), test: (l, v) => l.lane === v },
       { id: "flag", label: "Flags", options: [...new Set(rows.flatMap((l) => l.flags))].map((f) => ({ value: f, label: journey.data?.flags[f] ?? f })), test: (l, v) => l.flags.includes(v) },
       { id: "source", label: "Source", options: [...new Set(rows.map((l) => l.source))].map((s) => ({ value: s, label: s })), test: (l, v) => l.source === v },
@@ -194,6 +196,7 @@ export function LeadsPage() {
                 <span className="flex min-w-0 flex-col gap-1">
                   <StageChip lead={l} />
                   <FlagChips labels={l.flagLabels} />
+                  {l.brand.kbStatus !== "verified" && <KbChip status={l.brand.kbStatus} />}
                 </span>
                 {showRec && (
                   <span className="flex min-w-0 flex-col gap-0.5" title={l.recommendation?.reasons.join("\n")}>

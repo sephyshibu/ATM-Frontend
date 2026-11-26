@@ -29,3 +29,23 @@ export const usdShort = (n: number | null | undefined) => {
 }
 
 export const siteUrl = (domain: string) => `https://${domain}`
+
+/** "USD 5M–7M" for a range, "USD 12.5M" for one amount. */
+export const usdRange = (min: number | null | undefined, max: number | null | undefined) => (min == null ? "" : max != null && max !== min ? `${usdShort(min)}–${usdShort(max).replace("USD ", "")}` : usdShort(min))
+
+type RecordKind = "organisation" | "brand" | "product" | "person"
+const DEFAULT_REQUIRED: Record<RecordKind, string[]> = { organisation: [], brand: ["website", "category", "subCategory"], product: [], person: ["email"] }
+
+/** The built-in fields of a record type that are required now (Settings → Fields). */
+export const requiredSet = (options: RecordOptions | undefined, kind: RecordKind) => new Set(options?.required?.[kind] ?? DEFAULT_REQUIRED[kind])
+
+const blank = (v: unknown) => v === null || v === undefined || (typeof v === "string" && v.trim() === "") || (Array.isArray(v) && v.length === 0)
+
+/**
+ * The first required field left empty, as a message. On an edit a field counts only if it had a value before, so
+ * a record saved before the field became required can still be edited (the server applies the same rule).
+ */
+export function missingBuiltIn(required: Set<string>, fields: { key: string; label: string; value: unknown; before?: unknown }[], isEdit: boolean) {
+  const f = fields.find((x) => required.has(x.key) && blank(x.value) && (!isEdit || !blank(x.before)))
+  return f ? `${f.label} is required.` : undefined
+}

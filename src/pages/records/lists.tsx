@@ -8,7 +8,7 @@ import { MUTED, RED } from "@/components/common/tones"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { useApi } from "@/lib/api"
-import { countryName, optionLabel, personName, usdShort } from "@/lib/records"
+import { countryName, optionLabel, personName, usdRange } from "@/lib/records"
 import { useSession } from "@/lib/session"
 import type { BrandRow, Organisation, PersonRow, RecordOptions, TagRef } from "@/lib/types"
 
@@ -56,7 +56,7 @@ export function BrandsList({ options }: { options?: RecordOptions }) {
   const label = (list: keyof RecordOptions["lists"], code: string | null) => optionLabel(options, list, code)
   const { shown, toolbar } = useListControls(data, {
     placeholder: "Search brands, websites, organisations",
-    search: (b) => `${b.name} ${b.domain} ${b.organisation.name} ${b.tags.map((t) => t.label).join(" ")}`,
+    search: (b) => `${b.name} ${b.domain ?? ""} ${b.organisation.name} ${b.tags.map((t) => t.label).join(" ")}`,
     filters: [
       { id: "category", label: "Category", options: uniq(data.map((b) => b.categoryCode)).map((c) => ({ value: c, label: label("category", c) })), test: (b, v) => b.categoryCode === v },
       { id: "routing", label: "Lane", options: uniq(data.map((b) => b.routingCode)).map((c) => ({ value: c, label: label("routing", c) })), test: (b, v) => b.routingCode === v },
@@ -119,7 +119,7 @@ export function BrandsList({ options }: { options?: RecordOptions }) {
                 </span>
                 <span className="truncate">{label("routing", b.routingCode)}</span>
                 <span className="truncate">{countryName(b.homeCountry)}</span>
-                <span className="tabular-nums">{usdShort(b.homeRevenueUsd)}</span>
+                <span className="tabular-nums">{usdRange(b.homeRevenueUsd, b.homeRevenueMaxUsd)}</span>
                 <span>{label("tier", b.tierCode)}</span>
                 <span className="truncate">{b.owner?.name}</span>
                 <span className="tabular-nums">{b.productCount}</span>

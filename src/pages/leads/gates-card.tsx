@@ -1,4 +1,4 @@
-import { CircleAlert, History } from "lucide-react"
+import { CircleAlert, History, StickyNote } from "lucide-react"
 import { useState } from "react"
 
 import { Chip } from "@/components/common/chip"
@@ -34,6 +34,8 @@ export function GatesPanel({ leadId, closed, options, onChanged }: { leadId: str
   const gates = useApi<LeadGates>(`/leads/${leadId}/gates`)
   const [editing, setEditing] = useState<{ gate: GateRow; mode: Mode } | null>(null)
   const [openHistory, setOpenHistory] = useState<string | null>(null)
+  // The gate whose note is being written, and the text so far.
+  const [noting, setNoting] = useState<{ code: string; text: string } | null>(null)
 
   const save = async (gate: GateRow, body: Record<string, unknown>) => {
     const r = await attempt(() => api.patch<LeadGates>(`/leads/${leadId}/gates/${gate.code}`, body), `Gate ${gate.code} saved.`)
@@ -97,6 +99,30 @@ export function GatesPanel({ leadId, closed, options, onChanged }: { leadId: str
                       )}
                       {gate.applies && gate.value === "unknown" && gate.source !== "auto" && gate.ruleCheck && gate.ruleCheck.value !== "unknown" && <span className="text-xs text-muted-foreground">Suggested from the brand's details: {VALUE_LABELS[gate.ruleCheck.value]}. {gate.ruleCheck.why}</span>}
                       {gate.applies && gate.source === "auto" && <span className="text-xs text-muted-foreground">Set automatically from the brand's details; it follows them until someone sets it by hand.</span>}
+                      {gate.note && noting?.code !== gate.code && (
+                        <span className="mt-1 rounded-md border bg-[#fffaeb] px-2 py-1 text-xs whitespace-pre-wrap text-foreground">
+                          <StickyNote className="mr-1 inline size-3 text-[#b54708]" />
+                          {gate.note}
+                        </span>
+                      )}
+                      {noting?.code === gate.code && (
+                        <span className="mt-1 flex flex-col gap-1.5">
+                          <Textarea autoFocus value={noting.text} onChange={(e) => setNoting({ code: gate.code, text: e.target.value })} placeholder="What was found, what to check next…" className="min-h-16 text-sm text-foreground" />
+                          <span className="flex gap-1.5">
+                            <Button
+                              size="sm"
+                              onClick={async () => {
+                                if (await save(gate, { note: noting.text })) setNoting(null)
+                              }}
+                            >
+                              Save note
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setNoting(null)}>
+                              Cancel
+                            </Button>
+                          </span>
+                        </span>
+                      )}
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       {gate.applies ? <Chip tone={VALUE_TONES[gate.value]}>{VALUE_LABELS[gate.value]}</Chip> : <Chip tone={GREY}>Not needed</Chip>}
@@ -115,6 +141,11 @@ export function GatesPanel({ leadId, closed, options, onChanged }: { leadId: str
                           Needed again
                         </Button>
                       )}
+                      {gate.canEdit && !closed && noting?.code !== gate.code && (
+                        <Button size="icon-xs" variant="ghost" aria-label={gate.note ? `Edit the note on gate ${gate.code}` : `Add a note to gate ${gate.code}`} title={gate.note ? "Edit note" : "Add note"} onClick={() => setNoting({ code: gate.code, text: gate.note })}>
+                          <StickyNote />
+                        </Button>
+                      )}
                       {gate.history.length > 0 && (
                         <Button size="icon-xs" variant="ghost" aria-label={`History of gate ${gate.code}`} onClick={() => setOpenHistory(openHistory === gate.code ? null : gate.code)}>
                           <History />
@@ -127,7 +158,7 @@ export function GatesPanel({ leadId, closed, options, onChanged }: { leadId: str
                       {gate.history.map((h) => (
                         <li key={h.id}>
                           <span className="font-medium">
-                            {h.field === "value" ? "Value" : h.field === "applies" ? "Needed" : "Evidence"}: {h.before ?? "—"} → {h.after ?? "—"}
+                            {h.field === "value" ? "Value" : h.field === "applies" ? "Needed" : h.field === "note" ? "Note" : "Evidence"}: {h.before ?? "—"} → {h.after ?? "—"}
                           </span>
                           <span className="text-muted-foreground">
                             {" "}
