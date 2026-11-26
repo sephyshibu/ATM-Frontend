@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils"
 const AREAS = [
   { to: "/leads", label: "Leads", permission: "records.view" },
   { to: "/records", label: "Records", permission: "records.view" },
+  { to: "/meetings", label: "Meetings", permission: "records.view" },
   { to: "/settings", label: "Settings", permission: "settings.view" },
 ]
 

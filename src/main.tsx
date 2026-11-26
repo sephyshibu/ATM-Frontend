@@ -8,9 +8,12 @@ import { AppLayout, Home } from "@/components/shell/app-layout"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { SessionProvider } from "@/lib/session"
 import { initThemeMode } from "@/lib/theme"
+import { BookPage } from "@/pages/booking/book-page"
+import { ManageBookingPage } from "@/pages/booking/manage-page"
 import { InvitePage } from "@/pages/invite"
 import { LeadsPage } from "@/pages/leads"
 import { LoginPage } from "@/pages/login"
+import { MeetingsPage } from "@/pages/meetings"
 import { NoAccessPage } from "@/pages/no-access"
 import { RecordsPage } from "@/pages/records"
 import { BrandPage } from "@/pages/records/brand-page"
@@ -22,6 +25,9 @@ initThemeMode()
 const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
   { path: "/invite/:token", element: <InvitePage /> },
+  // Public booking pages: no sign-in.
+  { path: "/book/:handle", element: <BookPage /> },
+  { path: "/booking/:token", element: <ManageBookingPage /> },
   {
     element: <AppLayout />,
     children: [
@@ -30,6 +36,7 @@ const router = createBrowserRouter([
       { path: "/records", element: <RecordsPage /> },
       { path: "/records/brands/:id", element: <BrandPage /> },
       { path: "/records/organisations/:id", element: <OrganisationPage /> },
+      { path: "/meetings", element: <MeetingsPage /> },
       { path: "/settings", element: <SettingsPage /> },
       { path: "/no-access", element: <NoAccessPage /> },
       { path: "*", element: <Home /> },

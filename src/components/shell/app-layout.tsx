@@ -27,7 +27,7 @@ export function AppLayout() {
   if (!me) return <Navigate to="/login" replace state={{ from: `${pathname}${search}` }} />
   return (
     <div className="flex min-h-screen flex-col">
-      <AppHeader me={me} area={pathname.startsWith("/leads") ? "Leads" : pathname.startsWith("/records") ? "Records" : pathname.startsWith("/settings") ? "Settings" : "ATM"} home={homeFor(me)} />
+      <AppHeader me={me} area={pathname.startsWith("/leads") ? "Leads" : pathname.startsWith("/records") ? "Records" : pathname.startsWith("/meetings") ? "Meetings" : pathname.startsWith("/settings") ? "Settings" : "ATM"} home={homeFor(me)} />
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-6 py-6">
         <Outlet />
       </main>

@@ -534,3 +534,83 @@ export type BrandTemplates = {
 }
 
 export type TemplatePreview = { contact: BrandTemplates["contact"]; touchOne: BrandTemplates["touchOne"]; steps: RenderedStep[]; missing: string[]; usedFallbackOpening: boolean; problems: string[] }
+
+// ---------------------------------------------------------------- Booking pages and Google Calendar
+
+export type BookingQuestionType = "text" | "textarea" | "phone" | "email" | "url" | "number" | "yesno" | "select"
+export type BookingQuestion = { id: string; label: string; type: BookingQuestionType; required: boolean; options?: string[]; help?: string }
+export type AvailabilityWindow = { weekday: number; startMinute: number; endMinute: number }
+
+export type CalendarStatus = { configured: boolean; missing: string[]; callbackUrl: string; connected: { email: string | null; since: string } | null }
+
+export type EventTypeView = {
+  id: string
+  name: string
+  description: string
+  slug: string
+  link: string
+  durationMins: number
+  conferencing: "GOOGLE_MEET" | "CUSTOM_LINK" | "NONE"
+  customLink: string | null
+  bufferBeforeMins: number
+  bufferAfterMins: number
+  minNoticeMins: number
+  dateRangeDays: number
+  slotIncrementMins: number
+  maxPerDay: number | null
+  timezone: string
+  questions: BookingQuestion[]
+  availability: AvailabilityWindow[]
+  active: boolean
+  archived: boolean
+  upcoming: number
+  updatedAt: string
+}
+
+export type HostBooking = {
+  id: string
+  eventName: string
+  inviteeName: string
+  inviteeEmail: string
+  inviteeTimezone: string | null
+  startsAt: string
+  endsAt: string
+  status: "confirmed" | "cancelled"
+  meetingUrl: string | null
+  onCalendar: boolean
+  answers: { label: string; value: string }[]
+  brand: { id: string; name: string } | null
+  personId: string | null
+  cancelledBy: string | null
+  cancelReason: string | null
+  rescheduledFrom: string | null
+  createdAt: string
+}
+
+export type PublicEventInfo = {
+  name: string
+  description: string
+  durationMins: number
+  conferencing: EventTypeView["conferencing"]
+  timezone: string
+  dateRangeDays: number
+  hostName: string
+  hostTitle: string
+  questions: BookingQuestion[]
+}
+
+export type SlotList = { slots: string[]; timezone: string; durationMins: number }
+
+export type ManageInfo = {
+  eventName: string
+  hostName: string
+  durationMins: number
+  timezone: string
+  inviteeName: string
+  inviteeTimezone: string | null
+  startsAt: string
+  endsAt: string
+  status: "confirmed" | "cancelled"
+  meetingUrl: string | null
+  canChange: boolean
+}
